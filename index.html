@@ -1,0 +1,1253 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PAPELARIA SILVA</title>
+    <link rel="icon" type="image/png" href="./IMG/Logo.png">
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* Custom styles */
+        body {
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        .container {
+            max-width: 1200px;
+            margin-left: auto;
+            margin-right: auto;
+            padding-left: 1rem;
+            padding-right: 1rem;
+        }
+        /* Custom modal styles */
+        .modal {
+            display: none; /* Hidden by default */
+            position: fixed; /* Stay in place */
+            z-index: 1000; /* Sit on top */
+            left: 0;
+            top: 0;
+            width: 100%; /* Full width */
+            height: 100%; /* Full height */
+            overflow: auto; /* Enable scroll if needed */
+            background-color: rgba(0,0,0,0.4); /* Black w/ opacity */
+            justify-content: center;
+            align-items: center;
+        }
+        .modal-content {
+            background-color: #fefefe;
+            margin: auto;
+            padding: 20px;
+            border-radius: 0.5rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            width: 90%;
+            max-width: 500px;
+            position: relative;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        .close-button {
+            position: absolute;
+            top: 10px;
+            right: 15px;
+            color: #aaa;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .close-button:hover,
+        .close-button:focus {
+            color: black;
+            text-decoration: none;
+            cursor: pointer;
+        }
+        /* Toast notification styles */
+        #toast-container {
+            position: fixed;
+            top: 1rem;
+            right: 1rem;
+            z-index: 10000;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+        .toast {
+            padding: 0.75rem 1rem;
+            border-radius: 0.5rem;
+            color: white;
+            font-weight: 500;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            opacity: 0;
+            transform: translateY(-20px);
+            animation: fadeInOut 3s forwards;
+        }
+        .toast.success {
+            background-color: #22c55e; /* green-500 */
+        }
+        .toast.error {
+            background-color: #ef4444; /* red-500 */
+        }
+        @keyframes fadeInOut {
+            0% { opacity: 0; transform: translateY(-20px); }
+            10% { opacity: 1; transform: translateY(0); }
+            90% { opacity: 1; transform: translateY(0); }
+            100% { opacity: 0; transform: translateY(-20px); }
+        }
+    </style>
+</head>
+<body>
+    <div id="app-root"></div>
+    <div id="toast-container"></div>
+
+    <script>
+        // Global state variables
+        let products = [];
+        let shippingZones = [];
+        let isAuthenticated = false;
+        const ADMIN_PASSWORD = 'admin123'; // You can change this
+        let currentPath = window.location.hash.slice(1) || '/'; // Get path from hash or default to '/'
+
+        // DOM elements
+        const appRoot = document.getElementById('app-root');
+        const toastContainer = document.getElementById('toast-container');
+
+        // --- Helper Functions ---
+
+        /**
+         * Creates a DOM element with optional classes, text content, and attributes.
+         * @param {string} tag - The HTML tag name (e.g., 'div', 'p', 'button').
+         * @param {string} [classes=''] - Space-separated CSS classes.
+         * @param {string} [textContent=''] - The inner text content of the element.
+         * @param {Object} [attributes={}] - An object of key-value pairs for attributes (e.g., { id: 'myId', src: 'image.png' }).
+         * @returns {HTMLElement} The created DOM element.
+         */
+        function createElement(tag, classes = '', textContent = '', attributes = {}) {
+            const element = document.createElement(tag);
+            if (classes) {
+                element.className = classes;
+            }
+            if (textContent) {
+                element.textContent = textContent;
+            }
+            for (const key in attributes) {
+                if (attributes.hasOwnProperty(key)) {
+                    element.setAttribute(key, attributes[key]);
+                }
+            }
+            return element;
+        }
+
+        /**
+         * Clears all child nodes from a given DOM element.
+         * @param {HTMLElement} element - The parent element whose children are to be removed.
+         */
+        function clearChildren(element) {
+            while (element.firstChild) {
+                element.removeChild(element.firstChild);
+            }
+        }
+
+        /**
+         * Displays a toast notification.
+         * @param {string} message - The message to display in the toast.
+         * @param {'success'|'error'} type - The type of toast (determines color).
+         */
+        function showToast(message, type) {
+            const toast = createElement('div', `toast ${type}`, message);
+            toastContainer.appendChild(toast);
+            setTimeout(() => {
+                toast.remove();
+            }, 3000); // Toast disappears after 3 seconds
+        }
+
+        // --- Data Persistence (localStorage) ---
+
+        /**
+         * Loads products from localStorage or initializes with default data.
+         */
+        function loadProducts() {
+            const savedProducts = localStorage.getItem('products');
+            if (savedProducts) {
+                products = JSON.parse(savedProducts);
+            } else {
+                products = [
+                    { id: '1', name: 'Caderno Universitário', price: 15.90, description: 'Caderno universitário 10 matérias', category: 'cadernos', image: 'https://placehold.co/192x192/E0E0E0/333333?text=Caderno' },
+                    { id: '2', name: 'Caneta Esferográfica', price: 2.50, description: 'Caneta esferográfica azul', category: 'canetas', image: 'https://placehold.co/192x192/E0E0E0/333333?text=Caneta' },
+                    { id: '3', name: 'Borracha Branca', price: 1.80, description: 'Borracha macia, não mancha', category: 'borrachas', image: 'https://placehold.co/192x192/E0E0E0/333333?text=Borracha' },
+                    { id: '4', name: 'Lápis Grafite HB', price: 1.20, description: 'Lápis grafite HB com borracha na ponta', category: 'lapis', image: 'https://placehold.co/192x192/E0E0E0/333333?text=Lapis' },
+                    { id: '5', name: 'Pasta Plástica', price: 4.00, description: 'Pasta plástica com elástico, diversas cores', category: 'pastas', image: 'https://placehold.co/192x192/E0E0E0/333333?text=Pasta' }
+                ];
+                saveProducts();
+            }
+        }
+
+        /**
+         * Saves current products array to localStorage.
+         */
+        function saveProducts() {
+            localStorage.setItem('products', JSON.stringify(products));
+        }
+
+        /**
+         * Loads shipping zones from localStorage or initializes with default data.
+         */
+        function loadShippingZones() {
+            const savedZones = localStorage.getItem('shippingZones');
+            if (savedZones) {
+                shippingZones = JSON.parse(savedZones);
+            } else {
+                shippingZones = [
+                    { id: '1', neighborhood: 'Centro', price: 5.00 },
+                    { id: '2', neighborhood: 'Zona Norte', price: 8.00 },
+                    { id: '3', neighborhood: 'Zona Sul', price: 10.00 },
+                    { id: '4', neighborhood: 'Zona Leste', price: 12.00 },
+                    { id: '5', neighborhood: 'Zona Oeste', price: 15.00 }
+                ];
+                saveShippingZones();
+            }
+        }
+
+        /**
+         * Saves current shipping zones array to localStorage.
+         */
+        function saveShippingZones() {
+            localStorage.setItem('shippingZones', JSON.stringify(shippingZones));
+        }
+
+        // --- Routing ---
+
+        /**
+         * Navigates to a new path by updating the URL hash and re-rendering the page.
+         * @param {string} path - The new path (e.g., '/', '/catalogo').
+         */
+        function navigateTo(path) {
+            window.location.hash = path;
+        }
+
+        /**
+         * Handles route changes based on the URL hash.
+         */
+        function handleRouteChange() {
+            currentPath = window.location.hash.slice(1) || '/';
+            renderApp();
+        }
+
+        // --- Icon SVGs (replacing Lucide React) ---
+
+        const icons = {
+            search: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-search"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>`,
+            shoppingCart: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-shopping-cart"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/></svg>`,
+            package: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-package"><path d="m7.5 4.27 9 5.15"/><path d="m7.5 19.73 9-5.15"/><path d="M3.3 7L12 2l8.7 5"/><path d="M12 22 3.3 17l8.7-5 8.7 5L12 22"/></svg>`,
+            truck: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-truck"><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M10 18h6"/><path d="M18 18h2a2 2 0 0 0 2-2v-5a2 2 0 0 0-2-2h-7.5"/><path d="M14 14h1"/><path d="M5 18H3"/><path d="M17 18h.01"/><circle cx="7" cy="18" r="2"/><circle cx="17" cy="18" r="2"/></svg>`,
+            settings: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-settings"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.78 1.22a2 2 0 0 0 .73 2.73l.04.02a2 2 0 0 1 .97 2.18v.44a2 2 0 0 1-.97 2.18l-.04.02a2 2 0 0 0-.73 2.73l.78 1.22a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.78-1.22a2 2 0 0 0-.73-2.73l-.04-.02a2 2 0 0 1-.97-2.18v-.44a2 2 0 0 1 .97-2.18l.04-.02a2 2 0 0 0 .73-2.73l-.78-1.22a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>`,
+            plus: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-plus"><path d="M12 5v14"/><path d="M5 12h14"/></svg>`,
+            edit: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-edit"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4Z"/></svg>`,
+            trash2: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-trash-2"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>`,
+            eye: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-eye"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>`,
+            eyeOff: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-eye-off"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-10-7-10-7a1.8 1.8 0 0 1 0-.22"/><path d="M19.75 16.5V16A10.07 10.07 0 0 0 22 12c0-3-2.6-5.8-5-7C14.4 3.2 12.2 2 10 2c-.7 0-1.4.1-2 .2"/><path d="M2 2l20 20"/><path d="M13.06 5.06a4 4 0 0 1 5.66 5.66m-1.94-1.94a2 2 0 0 0-2.83-2.83"/></svg>`,
+            menu: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-menu"><line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="18" y2="18"/></svg>`,
+            x: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-x"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>`,
+            upload: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-upload"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>`
+        };
+
+        // --- Header Component ---
+        function renderHeader() {
+            const header = createElement('header', 'bg-white shadow-sm border-b');
+            const container = createElement('div', 'container mx-auto px-4 py-4');
+            const flexContainer = createElement('div', 'flex items-center justify-between');
+
+            const logoLink = createElement('a', 'text-xl md:text-2xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent', 'PAPELARIA SILVA');
+            logoLink.href = '#/';
+            logoLink.addEventListener('click', (e) => {
+                e.preventDefault();
+                navigateTo('/');
+            });
+
+            // Desktop Navigation
+            const desktopNav = createElement('nav', 'hidden md:flex space-x-8');
+            const navLinks = [
+                { text: 'Home', path: '/' },
+                { text: 'Catálogo', path: '/catalogo' },
+                { text: 'Fretes', path: '/fretes' }
+            ];
+            navLinks.forEach(linkData => {
+                const link = createElement('a', 'text-gray-600 hover:text-purple-600 transition-colors', linkData.text);
+                link.href = `#${linkData.path}`;
+                link.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    navigateTo(linkData.path);
+                });
+                desktopNav.appendChild(link);
+            });
+
+            // Desktop Search and Cart
+            const desktopActions = createElement('div', 'hidden md:flex items-center space-x-4');
+            const searchDiv = createElement('div', 'relative');
+            const searchIcon = createElement('span', 'absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4 cursor-pointer');
+            searchIcon.innerHTML = icons.search;
+            const searchInput = createElement('input', 'pl-10 w-64 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500', '', { type: 'text', placeholder: 'Pesquisar produtos...' });
+            searchInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter' && searchInput.value.trim()) {
+                    e.preventDefault();
+                    // Store search term in localStorage to pass to catalog page
+                    localStorage.setItem('globalSearchTerm', searchInput.value.trim());
+                    navigateTo('/catalogo');
+                }
+            });
+
+            // Add click event to search icon
+            searchIcon.addEventListener('click', () => {
+                if (searchInput.value.trim()) {
+                    localStorage.setItem('globalSearchTerm', searchInput.value.trim());
+                    navigateTo('/catalogo');
+                }
+            });
+            searchDiv.appendChild(searchIcon);
+            searchDiv.appendChild(searchInput);
+
+            const whatsappButton = createElement('a', 'inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-8 px-3', '');
+            whatsappButton.href = 'https://wa.me/553432236994?text=Olá! Gostaria de fazer um pedido.';
+            whatsappButton.target = '_blank';
+            whatsappButton.rel = 'noopener noreferrer';
+            whatsappButton.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor" class="h-4 w-4 text-green-600"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893A11.821 11.821 0 0020.885 3.488"/></svg>';
+            desktopActions.appendChild(searchDiv);
+            desktopActions.appendChild(whatsappButton);
+
+            // Mobile Menu Button
+            const mobileMenuButton = createElement('button', 'md:hidden inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 h-9 px-4 py-2 hover:bg-accent hover:text-accent-foreground', '');
+            const menuIcon = createElement('span', 'h-5 w-5');
+            menuIcon.innerHTML = icons.menu;
+            mobileMenuButton.appendChild(menuIcon);
+
+            let isMenuOpen = false;
+            mobileMenuButton.addEventListener('click', () => {
+                isMenuOpen = !isMenuOpen;
+                menuIcon.innerHTML = isMenuOpen ? icons.x : icons.menu;
+                mobileMenu.classList.toggle('hidden', !isMenuOpen);
+            });
+
+            flexContainer.appendChild(logoLink);
+            flexContainer.appendChild(desktopNav);
+            flexContainer.appendChild(desktopActions);
+            flexContainer.appendChild(mobileMenuButton);
+
+            // Mobile Menu
+            const mobileMenu = createElement('div', 'md:hidden mt-4 pb-4 border-t border-gray-200 hidden');
+            const mobileNav = createElement('nav', 'flex flex-col space-y-4 mt-4');
+            navLinks.forEach(linkData => {
+                const link = createElement('a', 'text-gray-600 hover:text-purple-600 transition-colors py-2', linkData.text);
+                link.href = `#${linkData.path}`;
+                link.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    navigateTo(linkData.path);
+                    isMenuOpen = false; // Close menu on click
+                    mobileMenu.classList.add('hidden');
+                    menuIcon.innerHTML = icons.menu;
+                });
+                mobileNav.appendChild(link);
+            });
+
+            const mobileSearchDiv = createElement('div', 'mt-4 space-y-3');
+            const mobileSearchRelative = createElement('div', 'relative');
+            const mobileSearchIcon = createElement('span', 'absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4 cursor-pointer');
+            mobileSearchIcon.innerHTML = icons.search;
+            const mobileSearchInput = createElement('input', 'pl-10 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500', '', { type: 'text', placeholder: 'Pesquisar produtos...' });
+            mobileSearchInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter' && mobileSearchInput.value.trim()) {
+                    e.preventDefault();
+                    localStorage.setItem('globalSearchTerm', mobileSearchInput.value.trim());
+                    navigateTo('/catalogo');
+                    // Close mobile menu
+                    isMenuOpen = false;
+                    mobileMenu.classList.add('hidden');
+                    menuIcon.innerHTML = icons.menu;
+                }
+            });
+
+            // Add click event to mobile search icon
+            mobileSearchIcon.addEventListener('click', () => {
+                if (mobileSearchInput.value.trim()) {
+                    localStorage.setItem('globalSearchTerm', mobileSearchInput.value.trim());
+                    navigateTo('/catalogo');
+                    // Close mobile menu
+                    isMenuOpen = false;
+                    mobileMenu.classList.add('hidden');
+                    menuIcon.innerHTML = icons.menu;
+                }
+            });
+            mobileSearchRelative.appendChild(mobileSearchIcon);
+            mobileSearchRelative.appendChild(mobileSearchInput);
+
+            const mobileWhatsappButton = createElement('a', 'inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-8 px-3 w-full', 'WhatsApp');
+            mobileWhatsappButton.href = 'https://wa.me/5534999999999?text=Olá! Gostaria de fazer um pedido.';
+            mobileWhatsappButton.target = '_blank';
+            mobileWhatsappButton.rel = 'noopener noreferrer';
+            const mobileWhatsappIcon = createElement('span', 'h-4 w-4 mr-2 text-green-600');
+            mobileWhatsappIcon.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893A11.821 11.821 0 0020.885 3.488"/></svg>';
+            mobileWhatsappButton.prepend(mobileWhatsappIcon);
+
+            mobileSearchDiv.appendChild(mobileSearchRelative);
+            mobileSearchDiv.appendChild(mobileWhatsappButton);
+
+            mobileMenu.appendChild(mobileNav);
+            mobileMenu.appendChild(mobileSearchDiv);
+
+            container.appendChild(flexContainer);
+            container.appendChild(mobileMenu);
+            header.appendChild(container);
+
+            return header;
+        }
+
+        // --- Home Page Component ---
+        function renderHomePage() {
+            clearChildren(appRoot);
+
+            appRoot.className = 'min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-pink-900 relative overflow-hidden'; // Added relative and overflow-hidden for decorative elements
+
+            appRoot.appendChild(renderHeader());
+
+            const main = createElement('main', 'container mx-auto px-4 py-8 md:py-16 relative z-10'); // Added relative z-10
+            const textCenter = createElement('div', 'text-center text-white');
+
+            const h1 = createElement('h1', 'text-4xl md:text-6xl font-bold mb-4');
+            h1.innerHTML = 'SILVA<span class="block text-3xl md:text-5xl">BAZAR E PAPELARIA</span>';
+
+            const p = createElement('p', 'text-lg md:text-xl mb-8 opacity-90 px-4', 'Encontre tudo para sua papelaria, escritório e muito mais. Confira nosso catálogo!');
+
+            const buttonGroup = createElement('div', 'flex flex-col sm:flex-row justify-center space-y-4 sm:space-y-0 sm:space-x-4 px-4');
+
+            const catalogLink = createElement('a', '');
+            catalogLink.href = '#/catalogo';
+            catalogLink.addEventListener('click', (e) => {
+                e.preventDefault();
+                navigateTo('/catalogo');
+            });
+            const catalogButton = createElement('button', 'inline-flex items-center justify-center whitespace-nowrap rounded-md text-lg font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-white text-purple-900 hover:bg-gray-100 h-12 px-6 w-full sm:w-auto', 'Ver Catálogo');
+            const packageIcon = createElement('span', 'mr-2 h-5 w-5');
+            packageIcon.innerHTML = icons.package;
+            catalogButton.prepend(packageIcon);
+            catalogLink.appendChild(catalogButton);
+
+            const shippingLink = createElement('a', '');
+            shippingLink.href = '#/fretes';
+            shippingLink.addEventListener('click', (e) => {
+                e.preventDefault();
+                navigateTo('/fretes');
+            });
+            const shippingButton = createElement('button', 'inline-flex items-center justify-center whitespace-nowrap rounded-md text-lg font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-transparent text-white border-white hover:bg-white hover:text-purple-900 h-12 px-6 w-full sm:w-auto', 'Consultar Frete');
+            const truckIcon = createElement('span', 'mr-2 h-5 w-5');
+            truckIcon.innerHTML = icons.truck;
+            shippingButton.prepend(truckIcon);
+            shippingLink.appendChild(shippingButton);
+
+            buttonGroup.appendChild(catalogLink);
+            buttonGroup.appendChild(shippingLink);
+
+            textCenter.appendChild(h1);
+            textCenter.appendChild(p);
+            textCenter.appendChild(buttonGroup);
+            main.appendChild(textCenter);
+            appRoot.appendChild(main);
+
+            // Decorative elements
+            appRoot.appendChild(createElement('div', 'absolute top-20 left-10 w-16 h-16 bg-pink-500 rounded-full opacity-20'));
+            appRoot.appendChild(createElement('div', 'absolute top-40 right-20 w-12 h-12 bg-yellow-500 rounded-full opacity-30'));
+            appRoot.appendChild(createElement('div', 'absolute bottom-20 left-20 w-20 h-20 bg-blue-500 rounded-full opacity-25'));
+            appRoot.appendChild(createElement('div', 'absolute bottom-40 right-10 w-14 h-14 bg-green-500 rounded-full opacity-20'));
+        }
+
+        // --- Product Catalog Component ---
+        function renderCatalogPage() {
+            clearChildren(appRoot);
+            appRoot.className = 'min-h-screen bg-gray-50'; // Reset background for this page
+
+            appRoot.appendChild(renderHeader());
+
+            const main = createElement('main', 'container mx-auto px-4 py-8');
+            const sectionHeader = createElement('div', 'mb-8');
+            const h1 = createElement('h1', 'text-3xl font-bold text-gray-900 mb-4', 'Catálogo de Produtos');
+
+            const filterControls = createElement('div', 'flex flex-col md:flex-row gap-4 mb-6');
+            const searchInputDiv = createElement('div', 'flex-1');
+            const searchInput = createElement('input', 'w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500', '', { type: 'text', placeholder: 'Buscar produtos...' });
+            searchInputDiv.appendChild(searchInput);
+
+            const categorySelect = createElement('select', 'px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500');
+            const allOption = createElement('option', '', 'Todas as categorias', { value: 'all' });
+            categorySelect.appendChild(allOption);
+
+            const categories = ['all', ...new Set(products.map(p => p.category))];
+            categories.filter(cat => cat !== 'all').forEach(category => {
+                const option = createElement('option', '', category.charAt(0).toUpperCase() + category.slice(1), { value: category });
+                categorySelect.appendChild(option);
+            });
+
+            filterControls.appendChild(searchInputDiv);
+            filterControls.appendChild(categorySelect);
+            sectionHeader.appendChild(h1);
+            sectionHeader.appendChild(filterControls);
+            main.appendChild(sectionHeader);
+
+            const productGrid = createElement('div', 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6');
+            main.appendChild(productGrid);
+
+            const noProductsFound = createElement('div', 'text-center py-16 hidden');
+            const packageIcon = createElement('span', 'h-16 w-16 text-gray-400 mx-auto mb-4');
+            packageIcon.innerHTML = icons.package;
+            noProductsFound.appendChild(packageIcon);
+            noProductsFound.appendChild(createElement('h3', 'text-xl font-semibold text-gray-600 mb-2', 'Nenhum produto encontrado'));
+            noProductsFound.appendChild(createElement('p', 'text-gray-500', 'Tente ajustar sua busca ou categoria.'));
+            main.appendChild(noProductsFound);
+
+            let currentSearchTerm = '';
+            let currentSelectedCategory = 'all';
+
+            function filterAndRenderProducts() {
+                let filtered = products;
+
+                if (currentSearchTerm) {
+                    filtered = filtered.filter(product =>
+                        product.name.toLowerCase().includes(currentSearchTerm.toLowerCase()) ||
+                        product.description.toLowerCase().includes(currentSearchTerm.toLowerCase())
+                    );
+                }
+
+                if (currentSelectedCategory !== 'all') {
+                    filtered = filtered.filter(product => product.category === currentSelectedCategory);
+                }
+
+                clearChildren(productGrid);
+                if (filtered.length === 0) {
+                    noProductsFound.classList.remove('hidden');
+                } else {
+                    noProductsFound.classList.add('hidden');
+                    filtered.forEach(product => {
+                        const card = createElement('div', 'bg-white rounded-lg shadow-sm hover:shadow-lg transition-shadow');
+                        const cardHeader = createElement('div', 'p-4');
+                        const img = createElement('img', 'w-full h-48 object-contain rounded-md bg-white', '', { src: product.image, alt: product.name });
+                        cardHeader.appendChild(img);
+
+                        const cardContent = createElement('div', 'p-4');
+                        const cardTitle = createElement('h3', 'text-lg font-semibold mb-2', product.name);
+                        const cardDescription = createElement('p', 'text-sm text-gray-600 mb-3 line-clamp-2', product.description);
+                        const priceDiv = createElement('div', 'flex items-center justify-start');
+                        const priceSpan = createElement('span', 'text-2xl font-bold text-purple-600', 'R$ ' + product.price.toFixed(2));
+                        priceDiv.appendChild(priceSpan);
+
+                        cardContent.appendChild(cardTitle);
+                        cardContent.appendChild(cardDescription);
+                        cardContent.appendChild(priceDiv);
+
+                        card.appendChild(cardHeader);
+                        card.appendChild(cardContent);
+                        productGrid.appendChild(card);
+                    });
+                }
+            }
+
+            // Check for global search term from header
+            const globalSearchTerm = localStorage.getItem('globalSearchTerm');
+            if (globalSearchTerm) {
+                currentSearchTerm = globalSearchTerm;
+                searchInput.value = globalSearchTerm;
+                localStorage.removeItem('globalSearchTerm'); // Clear after use
+            }
+
+            searchInput.addEventListener('input', (e) => {
+                currentSearchTerm = e.target.value;
+                filterAndRenderProducts();
+            });
+
+            categorySelect.addEventListener('change', (e) => {
+                currentSelectedCategory = e.target.value;
+                filterAndRenderProducts();
+            });
+
+            filterAndRenderProducts(); // Initial render
+            appRoot.appendChild(main);
+        }
+
+        // --- Shipping Page Component ---
+        function renderShippingPage() {
+            clearChildren(appRoot);
+            appRoot.className = 'min-h-screen bg-gray-50'; // Reset background
+
+            appRoot.appendChild(renderHeader());
+
+            const main = createElement('main', 'container mx-auto px-4 py-8');
+            const maxWidthDiv = createElement('div', 'max-w-4xl mx-auto');
+            const h1 = createElement('h1', 'text-3xl font-bold text-gray-900 mb-8', 'Consulta de Fretes');
+
+            const card = createElement('div', 'bg-white rounded-lg shadow-sm mb-8');
+            const cardHeader = createElement('div', 'flex flex-col space-y-1.5 p-6');
+            const cardTitle = createElement('h2', 'text-2xl font-semibold leading-none tracking-tight flex items-center', 'Valores de Entrega por Bairro');
+            const truckIcon = createElement('span', 'h-5 w-5 mr-2');
+            truckIcon.innerHTML = icons.truck;
+            cardTitle.prepend(truckIcon);
+            const cardDescription = createElement('p', 'text-sm text-muted-foreground', 'Consulte o valor do frete para seu bairro');
+            cardHeader.appendChild(cardTitle);
+            cardHeader.appendChild(cardDescription);
+
+            const cardContent = createElement('div', 'p-6 pt-0');
+            const searchInputDiv = createElement('div', 'mb-6');
+            const searchInput = createElement('input', 'w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500', '', { type: 'text', placeholder: 'Digite o nome do seu bairro...' });
+            searchInputDiv.appendChild(searchInput);
+            cardContent.appendChild(searchInputDiv);
+
+            const zonesGrid = createElement('div', 'grid gap-4');
+            cardContent.appendChild(zonesGrid);
+
+            const noZoneFound = createElement('div', 'text-center py-8 hidden');
+            noZoneFound.appendChild(createElement('p', 'text-gray-500', 'Bairro não encontrado. Entre em contato conosco!'));
+            cardContent.appendChild(noZoneFound);
+
+            let currentSearchTerm = '';
+
+            function filterAndRenderShippingZones() {
+                let filtered = shippingZones.filter(zone =>
+                    zone.neighborhood.toLowerCase().includes(currentSearchTerm.toLowerCase())
+                );
+
+                clearChildren(zonesGrid);
+                if (filtered.length === 0 && currentSearchTerm) {
+                    noZoneFound.classList.remove('hidden');
+                } else {
+                    noZoneFound.classList.add('hidden');
+                    filtered.forEach(zone => {
+                        const zoneDiv = createElement('div', 'flex items-center justify-between p-4 bg-gray-50 rounded-lg');
+                        zoneDiv.appendChild(createElement('span', 'font-medium text-gray-900', zone.neighborhood));
+                        zoneDiv.appendChild(createElement('span', 'text-lg font-bold text-purple-600', 'R$ ' + zone.price.toFixed(2)));
+                        zonesGrid.appendChild(zoneDiv);
+                    });
+                }
+            }
+
+            searchInput.addEventListener('input', (e) => {
+                currentSearchTerm = e.target.value;
+                filterAndRenderShippingZones();
+            });
+
+            card.appendChild(cardHeader);
+            card.appendChild(cardContent);
+            maxWidthDiv.appendChild(h1);
+            maxWidthDiv.appendChild(card);
+            main.appendChild(maxWidthDiv);
+            appRoot.appendChild(main);
+
+            filterAndRenderShippingZones(); // Initial render
+        }
+
+        // --- Admin Panel Component ---
+        function renderAdminPanel() {
+            clearChildren(appRoot);
+            appRoot.className = 'min-h-screen bg-gray-100'; // Reset background
+
+            if (!isAuthenticated) {
+                renderAdminLogin();
+                return;
+            }
+
+            // Admin Header
+            const header = createElement('header', 'bg-white shadow-sm border-b');
+            const container = createElement('div', 'container mx-auto px-4 py-4');
+            const flexContainer = createElement('div', 'flex items-center justify-between');
+
+            const h1 = createElement('h1', 'text-xl md:text-2xl font-bold text-gray-900', 'Painel Administrativo');
+
+            const buttonGroup = createElement('div', 'flex flex-wrap gap-2');
+            let activeTab = 'products'; // Default active tab for admin
+
+            const productTabButton = createElement('button', 'inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 h-9 px-4 py-2 ' + (activeTab === 'products' ? 'bg-primary text-primary-foreground hover:bg-primary/90' : 'border border-input bg-background hover:bg-accent hover:text-accent-foreground'), 'Produtos');
+            const productIcon = createElement('span', 'mr-1 md:mr-2 h-4 w-4');
+            productIcon.innerHTML = icons.package;
+            productTabButton.prepend(productIcon);
+            productTabButton.addEventListener('click', () => {
+                activeTab = 'products';
+                renderAdminPanelContent(); // Re-render content area
+                updateTabButtons();
+            });
+
+            const shippingTabButton = createElement('button', 'inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 h-9 px-4 py-2 ' + (activeTab === 'shipping' ? 'bg-primary text-primary-foreground hover:bg-primary/90' : 'border border-input bg-background hover:bg-accent hover:text-accent-foreground'), 'Fretes');
+            const truckIcon = createElement('span', 'mr-1 md:mr-2 h-4 w-4');
+            truckIcon.innerHTML = icons.truck;
+            shippingTabButton.prepend(truckIcon);
+            shippingTabButton.addEventListener('click', () => {
+                activeTab = 'shipping';
+                renderAdminPanelContent(); // Re-render content area
+                updateTabButtons();
+            });
+
+            const logoutButton = createElement('button', 'inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-9 px-4 py-2', 'Sair');
+            logoutButton.addEventListener('click', handleLogout);
+
+            buttonGroup.appendChild(productTabButton);
+            buttonGroup.appendChild(shippingTabButton);
+            buttonGroup.appendChild(logoutButton);
+
+            flexContainer.appendChild(h1);
+            flexContainer.appendChild(buttonGroup);
+            container.appendChild(flexContainer);
+            header.appendChild(container);
+            appRoot.appendChild(header);
+
+            const mainContentArea = createElement('main', 'container mx-auto px-4 py-8');
+            appRoot.appendChild(mainContentArea);
+
+            function updateTabButtons() {
+                productTabButton.className = 'inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 h-9 px-4 py-2 ' + (activeTab === 'products' ? 'bg-primary text-primary-foreground hover:bg-primary/90' : 'border border-input bg-background hover:bg-accent hover:text-accent-foreground');
+                shippingTabButton.className = 'inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 h-9 px-4 py-2 ' + (activeTab === 'shipping' ? 'bg-primary text-primary-foreground hover:bg-primary/90' : 'border border-input bg-background hover:bg-accent hover:text-accent-foreground');
+            }
+
+            function renderAdminPanelContent() {
+                clearChildren(mainContentArea); // Clear previous content
+
+                if (activeTab === 'products') {
+                    renderProductManagement(mainContentArea);
+                } else if (activeTab === 'shipping') {
+                    renderShippingManagement(mainContentArea);
+                }
+            }
+
+            renderAdminPanelContent(); // Initial render of content
+        }
+
+        // --- Admin Login ---
+        function renderAdminLogin() {
+            clearChildren(appRoot);
+            appRoot.className = 'min-h-screen bg-gray-100 flex items-center justify-center';
+
+            const card = createElement('div', 'bg-white rounded-lg shadow-sm w-full max-w-md');
+            const cardHeader = createElement('div', 'flex flex-col space-y-1.5 p-6');
+            const cardTitle = createElement('h2', 'text-2xl font-semibold leading-none tracking-tight text-center', 'Painel Administrativo');
+            const cardDescription = createElement('p', 'text-sm text-muted-foreground text-center', 'Digite a senha para acessar');
+            cardHeader.appendChild(cardTitle);
+            cardHeader.appendChild(cardDescription);
+
+            const cardContent = createElement('div', 'p-6 pt-0 space-y-4');
+            const passwordDiv = createElement('div', 'relative');
+            const passwordInput = createElement('input', 'flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50', '', { type: 'password', placeholder: 'Senha de administrador', id: 'admin-password-input' }); // Added ID
+            let showPassword = false;
+            const togglePasswordButton = createElement('button', 'absolute right-2 top-1/2 transform -translate-y-1/2 inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 h-9 px-4 py-2 hover:bg-accent hover:text-accent-foreground', '');
+            togglePasswordButton.innerHTML = icons.eye;
+            togglePasswordButton.addEventListener('click', () => {
+                showPassword = !showPassword;
+                passwordInput.type = showPassword ? 'text' : 'password';
+                togglePasswordButton.innerHTML = showPassword ? icons.eyeOff : icons.eye;
+            });
+
+            passwordDiv.appendChild(passwordInput);
+            passwordDiv.appendChild(togglePasswordButton);
+
+            const loginButton = createElement('button', 'inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2 w-full', 'Entrar');
+            const settingsIcon = createElement('span', 'mr-2 h-4 w-4');
+            settingsIcon.innerHTML = icons.settings;
+            loginButton.prepend(settingsIcon);
+
+            loginButton.addEventListener('click', () => handleAdminLogin(passwordInput.value));
+            passwordInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    handleAdminLogin(passwordInput.value);
+                }
+            });
+
+            cardContent.appendChild(passwordDiv);
+            cardContent.appendChild(loginButton);
+            card.appendChild(cardHeader);
+            card.appendChild(cardContent);
+            appRoot.appendChild(card);
+        }
+
+        function handleAdminLogin(password) {
+            if (password === ADMIN_PASSWORD) {
+                isAuthenticated = true;
+                showToast('Login realizado com sucesso!', 'success');
+                renderApp(); // Re-render the entire app to show admin panel
+            } else {
+                showToast('Senha incorreta!', 'error');
+            }
+        }
+
+        function handleLogout() {
+            isAuthenticated = false;
+            showToast('Logout realizado com sucesso!', 'success');
+            navigateTo('/');
+        }
+
+        // --- Product Management (Admin) ---
+        function renderProductManagement(parentDiv) {
+            const productManagementDiv = createElement('div', '');
+            const headerDiv = createElement('div', 'flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-4');
+            const h2 = createElement('h2', 'text-xl font-semibold', 'Gerenciar Produtos');
+
+            const addProductButton = createElement('button', 'inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-9 px-4 py-2 mb-2', 'Adicionar Produto');
+            const plusIcon = createElement('span', 'mr-2 h-4 w-4');
+            plusIcon.innerHTML = icons.plus;
+            addProductButton.prepend(plusIcon);
+            addProductButton.addEventListener('click', () => showProductDialog());
+
+            headerDiv.appendChild(h2);
+            headerDiv.appendChild(addProductButton);
+            productManagementDiv.appendChild(headerDiv);
+
+            const productListGrid = createElement('div', 'grid gap-4');
+            productManagementDiv.appendChild(productListGrid);
+
+            function renderProductList() {
+                clearChildren(productListGrid);
+                if (products.length === 0) {
+                    const noProductsDiv = createElement('div', 'text-center py-8 col-span-full');
+                    const packageIconLarge = createElement('span', 'h-16 w-16 text-gray-400 mx-auto mb-4');
+                    packageIconLarge.innerHTML = icons.package;
+                    noProductsDiv.appendChild(packageIconLarge);
+                    noProductsDiv.appendChild(createElement('h3', 'text-xl font-semibold text-gray-600 mb-2', 'Nenhum produto cadastrado'));
+                    noProductsDiv.appendChild(createElement('p', 'text-gray-500', 'Clique em "Adicionar Produto" para começar.'));
+                    productListGrid.appendChild(noProductsDiv);
+                } else {
+                    products.forEach(product => {
+                        const card = createElement('div', 'bg-white rounded-lg shadow-sm');
+                        const cardContent = createElement('div', 'p-4');
+                        const flexDiv = createElement('div', 'flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4');
+
+                        const imgDiv = createElement('div', 'flex items-center space-x-4 flex-1');
+                        const img = createElement('img', 'w-16 h-16 object-cover rounded bg-gray-100 flex-shrink-0', '', { src: product.image, alt: product.name });
+                        const textDiv = createElement('div', 'min-w-0 flex-1');
+                        textDiv.appendChild(createElement('h3', 'font-semibold truncate', product.name));
+                        textDiv.appendChild(createElement('p', 'text-sm text-gray-600 line-clamp-2', product.description));
+                        textDiv.appendChild(createElement('p', 'text-lg font-bold text-purple-600', 'R$ ' + product.price.toFixed(2)));
+                        imgDiv.appendChild(img);
+                        imgDiv.appendChild(textDiv);
+
+                        const actionsDiv = createElement('div', 'flex space-x-2 w-full sm:w-auto');
+                        const editButton = createElement('button', 'inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-9 px-4 py-2 flex-1 sm:flex-none', '');
+                        editButton.innerHTML = icons.edit;
+                        editButton.addEventListener('click', () => showProductDialog(product));
+
+                        const deleteButton = createElement('button', 'inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-9 px-4 py-2 flex-1 sm:flex-none', '');
+                        deleteButton.innerHTML = icons.trash2;
+                        deleteButton.addEventListener('click', () => deleteProduct(product.id));
+
+                        actionsDiv.appendChild(editButton);
+                        actionsDiv.appendChild(deleteButton);
+
+                        flexDiv.appendChild(imgDiv);
+                        flexDiv.appendChild(actionsDiv);
+                        cardContent.appendChild(flexDiv);
+                        card.appendChild(cardContent);
+                        productListGrid.appendChild(card);
+                    });
+                }
+            }
+
+            // Product Dialog (Modal)
+            let productDialogInstance = null;
+            let currentEditingProduct = null;
+            let selectedImageFile = null;
+
+            function showProductDialog(product = null) {
+                currentEditingProduct = product;
+                selectedImageFile = null; // Reset selected file
+
+                if (productDialogInstance) {
+                    productDialogInstance.remove(); // Remove existing dialog if any
+                }
+
+                productDialogInstance = createElement('div', 'modal');
+                const dialogContent = createElement('div', 'modal-content max-w-md mx-auto max-h-[90vh] overflow-y-auto');
+                const closeButton = createElement('span', 'close-button', '&times;');
+                closeButton.addEventListener('click', () => productDialogInstance.style.display = 'none');
+                dialogContent.appendChild(closeButton);
+
+                const dialogHeader = createElement('div', 'flex flex-col space-y-1.5 pb-4');
+                dialogHeader.appendChild(createElement('h3', 'text-2xl font-semibold leading-none tracking-tight', product ? 'Editar Produto' : 'Adicionar Produto'));
+                dialogContent.appendChild(dialogHeader);
+
+                const formDiv = createElement('div', 'space-y-4');
+
+                const nameDiv = createElement('div', '');
+                nameDiv.appendChild(createElement('label', 'text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 block mb-1', 'Nome'));
+                const nameInput = createElement('input', 'flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50', '', { placeholder: 'Nome do produto', value: product ? product.name : '' });
+                nameDiv.appendChild(nameInput);
+                formDiv.appendChild(nameDiv);
+
+                const priceDiv = createElement('div', '');
+                priceDiv.appendChild(createElement('label', 'text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 block mb-1', 'Preço'));
+                const priceInput = createElement('input', 'flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50', '', { type: 'number', step: '0.01', placeholder: '0.00', value: product ? product.price.toString() : '' });
+                priceDiv.appendChild(priceInput);
+                formDiv.appendChild(priceDiv);
+
+                const categoryDiv = createElement('div', '');
+                categoryDiv.appendChild(createElement('label', 'text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 block mb-1', 'Categoria'));
+                const categoryInput = createElement('input', 'flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50', '', { placeholder: 'Ex: cadernos, canetas', value: product ? product.category : '' });
+                categoryDiv.appendChild(categoryInput);
+                formDiv.appendChild(categoryDiv);
+
+                const descriptionDiv = createElement('div', '');
+                descriptionDiv.appendChild(createElement('label', 'text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 block mb-1', 'Descrição'));
+                const descriptionTextarea = createElement('textarea', 'flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 resize-none', '', { placeholder: 'Descrição do produto' });
+                descriptionTextarea.value = product ? product.description : '';
+                descriptionDiv.appendChild(descriptionTextarea);
+                formDiv.appendChild(descriptionDiv);
+
+                const imageDiv = createElement('div', '');
+                imageDiv.appendChild(createElement('label', 'text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 block mb-1', 'Imagem do Produto'));
+                const imageUploadSpace = createElement('div', 'space-y-3');
+
+                const fileInputContainer = createElement('div', 'flex items-center gap-2');
+                const fileInputButton = createElement('button', 'inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-9 px-4 py-2 w-full', 'Selecionar Imagem');
+                const uploadIcon = createElement('span', 'mr-2 h-4 w-4');
+                uploadIcon.innerHTML = icons.upload;
+                fileInputButton.prepend(uploadIcon);
+                const fileInput = createElement('input', 'hidden', '', { type: 'file', accept: 'image/*' });
+                fileInput.id = 'image-upload'; // Assign ID for button click
+                fileInputContainer.appendChild(fileInputButton);
+                fileInputContainer.appendChild(fileInput);
+                imageUploadSpace.appendChild(fileInputContainer);
+
+                const fileNameDisplay = createElement('p', 'text-sm text-green-600 hidden');
+                imageUploadSpace.appendChild(fileNameDisplay);
+
+                const imagePreviewDiv = createElement('div', 'border rounded-lg p-2 hidden');
+                const imagePreview = createElement('img', 'w-full h-32 object-cover rounded', '', { alt: 'Preview' });
+                imagePreviewDiv.appendChild(imagePreview);
+                imageUploadSpace.appendChild(imagePreviewDiv);
+
+                const orText = createElement('div', 'text-center text-gray-500 text-sm', 'ou');
+                imageUploadSpace.appendChild(orText);
+
+                const imageUrlInput = createElement('input', 'flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50', '', { placeholder: 'URL da imagem (opcional)', value: product && !product.image.startsWith('data:') ? product.image : '' });
+                imageUploadSpace.appendChild(imageUrlInput);
+
+                imageDiv.appendChild(imageUploadSpace);
+                formDiv.appendChild(imageDiv);
+
+                // Initial image setup
+                if (product && product.image) {
+                    imagePreview.src = product.image;
+                    imagePreviewDiv.classList.remove('hidden');
+                    if (product.image.startsWith('data:')) {
+                        fileNameDisplay.textContent = 'Imagem carregada (base64)';
+                        fileNameDisplay.classList.remove('hidden');
+                    }
+                }
+
+                fileInputButton.addEventListener('click', () => fileInput.click());
+                fileInput.addEventListener('change', (e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                        if (file.type.startsWith('image/')) {
+                            selectedImageFile = file;
+                            fileNameDisplay.textContent = 'Arquivo selecionado: ' + file.name;
+                            fileNameDisplay.classList.remove('hidden');
+                            imageUrlInput.value = ''; // Clear URL input if file selected
+
+                            const reader = new FileReader();
+                            reader.onload = (e) => {
+                                imagePreview.src = e.target.result;
+                                imagePreviewDiv.classList.remove('hidden');
+                            };
+                            reader.readAsDataURL(file);
+                        } else {
+                            showToast('Por favor, selecione apenas arquivos de imagem', 'error');
+                            fileInput.value = ''; // Clear file input
+                            selectedImageFile = null;
+                            fileNameDisplay.classList.add('hidden');
+                            imagePreviewDiv.classList.add('hidden');
+                        }
+                    } else {
+                        selectedImageFile = null;
+                        fileNameDisplay.classList.add('hidden');
+                    }
+                });
+
+                imageUrlInput.addEventListener('input', () => {
+                    selectedImageFile = null; // Clear selected file if URL is typed
+                    fileNameDisplay.classList.add('hidden');
+                    if (imageUrlInput.value) {
+                        imagePreview.src = imageUrlInput.value;
+                        imagePreviewDiv.classList.remove('hidden');
+                    } else {
+                        imagePreviewDiv.classList.add('hidden');
+                    }
+                });
+
+
+                const actionsDiv = createElement('div', 'flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-2 mt-4');
+                const cancelButton = createElement('button', 'inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-9 px-4 py-2 w-full sm:w-auto', 'Cancelar');
+                cancelButton.addEventListener('click', () => productDialogInstance.style.display = 'none');
+
+                const saveButton = createElement('button', 'inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-9 px-4 py-2 w-full sm:w-auto', product ? 'Atualizar' : 'Adicionar');
+                saveButton.addEventListener('click', () => {
+                    const name = nameInput.value.trim();
+                    const price = parseFloat(priceInput.value);
+                    const description = descriptionTextarea.value.trim();
+                    const category = categoryInput.value.trim();
+                    let image = imageUrlInput.value.trim();
+
+                    if (!name || isNaN(price) || price <= 0) {
+                        showToast('Nome e preço (válido) são obrigatórios!', 'error');
+                        return;
+                    }
+
+                    if (selectedImageFile) {
+                        // If a new file was selected, use its Data URL
+                        const reader = new FileReader();
+                        reader.onload = (e) => {
+                            image = e.target.result;
+                            saveProductLogic(name, price, description, category, image);
+                        };
+                        reader.readAsDataURL(selectedImageFile);
+                    } else {
+                        // If no new file, use URL input or existing image
+                        saveProductLogic(name, price, description, category, image || '/placeholder.svg');
+                    }
+                });
+
+                function saveProductLogic(name, price, description, category, image) {
+                    const newProduct = {
+                        id: currentEditingProduct ? currentEditingProduct.id : Date.now().toString(),
+                        name,
+                        price,
+                        description,
+                        category,
+                        image: image || '/placeholder.svg'
+                    };
+
+                    if (currentEditingProduct) {
+                        products = products.map(p => p.id === newProduct.id ? newProduct : p);
+                        showToast('Produto atualizado!', 'success');
+                    } else {
+                        products.push(newProduct);
+                        showToast('Produto adicionado!', 'success');
+                    }
+                    saveProducts();
+                    renderProductList(); // Re-render the list
+                    productDialogInstance.style.display = 'none';
+                }
+
+                actionsDiv.appendChild(cancelButton);
+                actionsDiv.appendChild(saveButton);
+                formDiv.appendChild(actionsDiv);
+
+                dialogContent.appendChild(formDiv);
+                productDialogInstance.appendChild(dialogContent);
+                document.body.appendChild(productDialogInstance);
+                productDialogInstance.style.display = 'flex'; // Show the modal
+            }
+
+            function deleteProduct(id) {
+                if (confirm('Tem certeza que deseja remover este produto?')) { // Using confirm for simplicity, would be a custom modal in production
+                    products = products.filter(p => p.id !== id);
+                    saveProducts();
+                    showToast('Produto removido!', 'success');
+                    renderProductList();
+                }
+            }
+
+            parentDiv.appendChild(productManagementDiv);
+            renderProductList(); // Initial render of product list
+        }
+
+        // --- Shipping Management (Admin) ---
+        function renderShippingManagement(parentDiv) {
+            const shippingManagementDiv = createElement('div', '');
+            const headerDiv = createElement('div', 'flex items-center justify-between mb-6');
+            const h2 = createElement('h2', 'text-xl font-semibold', 'Gerenciar Fretes');
+
+            const addShippingButton = createElement('button', 'inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-9 px-4 py-2', 'Adicionar Frete');
+            const plusIcon = createElement('span', 'mr-2 h-4 w-4');
+            plusIcon.innerHTML = icons.plus;
+            addShippingButton.prepend(plusIcon);
+            addShippingButton.addEventListener('click', () => showShippingDialog());
+
+            headerDiv.appendChild(h2);
+            headerDiv.appendChild(addShippingButton);
+            shippingManagementDiv.appendChild(headerDiv);
+
+            const shippingListGrid = createElement('div', 'grid gap-4');
+            shippingManagementDiv.appendChild(shippingListGrid);
+
+            function renderShippingList() {
+                clearChildren(shippingListGrid);
+                if (shippingZones.length === 0) {
+                    const noZonesDiv = createElement('div', 'text-center py-8 col-span-full');
+                    const truckIconLarge = createElement('span', 'h-16 w-16 text-gray-400 mx-auto mb-4');
+                    truckIconLarge.innerHTML = icons.truck;
+                    noZonesDiv.appendChild(truckIconLarge);
+                    noZonesDiv.appendChild(createElement('h3', 'text-xl font-semibold text-gray-600 mb-2', 'Nenhuma zona de frete cadastrada'));
+                    noZonesDiv.appendChild(createElement('p', 'text-gray-500', 'Clique em "Adicionar Frete" para começar.'));
+                    shippingListGrid.appendChild(noZonesDiv);
+                } else {
+                    shippingZones.forEach(zone => {
+                        const card = createElement('div', 'bg-white rounded-lg shadow-sm');
+                        const cardContent = createElement('div', 'p-4');
+                        const flexDiv = createElement('div', 'flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4');
+
+                        const textDiv = createElement('div', 'min-w-0 flex-1');
+                        textDiv.appendChild(createElement('h3', 'font-semibold truncate', zone.neighborhood));
+                        textDiv.appendChild(createElement('p', 'text-lg font-bold text-purple-600', 'R$ ' + zone.price.toFixed(2)));
+
+                        const actionsDiv = createElement('div', 'flex space-x-2 w-full sm:w-auto');
+                        const editButton = createElement('button', 'inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-9 px-4 py-2 flex-1 sm:flex-none', '');
+                        editButton.innerHTML = icons.edit;
+                        editButton.addEventListener('click', () => showShippingDialog(zone));
+
+                        const deleteButton = createElement('button', 'inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-9 px-4 py-2 flex-1 sm:flex-none', '');
+                        deleteButton.innerHTML = icons.trash2;
+                        deleteButton.addEventListener('click', () => deleteShipping(zone.id));
+
+                        actionsDiv.appendChild(editButton);
+                        actionsDiv.appendChild(deleteButton);
+
+                        flexDiv.appendChild(textDiv);
+                        flexDiv.appendChild(actionsDiv);
+                        cardContent.appendChild(flexDiv);
+                        card.appendChild(cardContent);
+                        shippingListGrid.appendChild(card);
+                    });
+                }
+            }
+
+            // Shipping Dialog (Modal)
+            let shippingDialogInstance = null;
+            let currentEditingShipping = null;
+
+            function showShippingDialog(zone = null) {
+                currentEditingShipping = zone;
+
+                if (shippingDialogInstance) {
+                    shippingDialogInstance.remove();
+                }
+
+                shippingDialogInstance = createElement('div', 'modal');
+                const dialogContent = createElement('div', 'modal-content max-w-md mx-auto');
+                const closeButton = createElement('span', 'close-button', '&times;');
+                closeButton.addEventListener('click', () => shippingDialogInstance.style.display = 'none');
+                dialogContent.appendChild(closeButton);
+
+                const dialogHeader = createElement('div', 'flex flex-col space-y-1.5 pb-4');
+                dialogHeader.appendChild(createElement('h3', 'text-2xl font-semibold leading-none tracking-tight', zone ? 'Editar Frete' : 'Adicionar Frete'));
+                dialogContent.appendChild(dialogHeader);
+
+                const formDiv = createElement('div', 'space-y-4');
+
+                const neighborhoodDiv = createElement('div', '');
+                neighborhoodDiv.appendChild(createElement('label', 'text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 block mb-1', 'Bairro'));
+                const neighborhoodInput = createElement('input', 'flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50', '', { placeholder: 'Nome do bairro', value: zone ? zone.neighborhood : '' });
+                neighborhoodDiv.appendChild(neighborhoodInput);
+                formDiv.appendChild(neighborhoodDiv);
+
+                const priceDiv = createElement('div', '');
+                priceDiv.appendChild(createElement('label', 'text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 block mb-1', 'Preço'));
+                const priceInput = createElement('input', 'flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50', '', { type: 'number', step: '0.01', placeholder: '0.00', value: zone ? zone.price.toString() : '' });
+                priceDiv.appendChild(priceInput);
+                formDiv.appendChild(priceDiv);
+
+                const actionsDiv = createElement('div', 'flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-2 mt-4');
+                const cancelButton = createElement('button', 'inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-9 px-4 py-2 w-full sm:w-auto', 'Cancelar');
+                cancelButton.addEventListener('click', () => shippingDialogInstance.style.display = 'none');
+
+                const saveButton = createElement('button', 'inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-9 px-4 py-2 w-full sm:w-auto', zone ? 'Atualizar' : 'Adicionar');
+                saveButton.addEventListener('click', () => {
+                    const neighborhood = neighborhoodInput.value.trim();
+                    const price = parseFloat(priceInput.value);
+
+                    if (!neighborhood || isNaN(price) || price <= 0) {
+                        showToast('Bairro e preço (válido) são obrigatórios!', 'error');
+                        return;
+                    }
+
+                    const newZone = {
+                        id: currentEditingShipping ? currentEditingShipping.id : Date.now().toString(),
+                        neighborhood,
+                        price
+                    };
+
+                    if (currentEditingShipping) {
+                        shippingZones = shippingZones.map(z => z.id === newZone.id ? newZone : z);
+                        showToast('Frete atualizado!', 'success');
+                    } else {
+                        shippingZones.push(newZone);
+                        showToast('Frete adicionado!', 'success');
+                    }
+                    saveShippingZones();
+                    renderShippingList(); // Re-render the list
+                    shippingDialogInstance.style.display = 'none';
+                });
+
+                actionsDiv.appendChild(cancelButton);
+                actionsDiv.appendChild(saveButton);
+                formDiv.appendChild(actionsDiv);
+
+                dialogContent.appendChild(formDiv);
+                shippingDialogInstance.appendChild(dialogContent);
+                document.body.appendChild(shippingDialogInstance);
+                shippingDialogInstance.style.display = 'flex';
+            }
+
+            function deleteShipping(id) {
+                if (confirm('Tem certeza que deseja remover esta zona de frete?')) { // Using confirm for simplicity
+                    shippingZones = shippingZones.filter(z => z.id !== id);
+                    saveShippingZones();
+                    showToast('Frete removido!', 'success');
+                    renderShippingList();
+                }
+            }
+
+            parentDiv.appendChild(shippingManagementDiv);
+            renderShippingList(); // Initial render of shipping list
+        }
+
+
+        // --- Main App Renderer ---
+        function renderApp() {
+            switch (currentPath) {
+                case '/':
+                    renderHomePage();
+                    break;
+                case '/catalogo':
+                    renderCatalogPage();
+                    break;
+                case '/fretes':
+                    renderShippingPage();
+                    break;
+                case '/admin':
+                    renderAdminPanel();
+                    break;
+                default:
+                    navigateTo('/'); // Redirect to home if path is unknown
+                    break;
+            }
+        }
+
+        // --- Initialization ---
+        document.addEventListener('DOMContentLoaded', () => {
+            loadProducts();
+            loadShippingZones();
+            window.addEventListener('hashchange', handleRouteChange);
+            renderApp(); // Initial render based on current hash
+
+            // Keyboard shortcut for Admin Panel (Ctrl + Shift + A)
+            document.addEventListener('keydown', (e) => {
+                if (e.ctrlKey && e.shiftKey && e.key === 'A') {
+                    e.preventDefault(); // Prevent default browser action for this shortcut
+                    if (currentPath !== '/admin' || !isAuthenticated) {
+                        navigateTo('/admin');
+                        // Give a small delay for the DOM to update with the password input
+                        setTimeout(() => {
+                            const passwordInput = document.getElementById('admin-password-input');
+                            if (passwordInput) {
+                                // Do not auto-fill password
+                                passwordInput.focus(); // Focus the input for user to type
+                            }
+                        }, 100);
+                    }
+                }
+            });
+        });
+    </script>
+</body>
+</html>
