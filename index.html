@@ -97,6 +97,68 @@
             100% { opacity: 0; transform: translateY(-20px); }
         }
     </style>
+    <!-- Firebase SDK e configuração -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+    <script>
+      const firebaseConfig = {
+        apiKey: "AIzaSyA5HcZDX38OYF8Jgxfbih6xzevNmeXbQX0",
+        authDomain: "papelariasilva-8cb5f.firebaseapp.com",
+        projectId: "papelariasilva-8cb5f",
+        storageBucket: "papelariasilva-8cb5f.appspot.com",
+        messagingSenderId: "474990545824",
+        appId: "1:474990545824:web:c519f520d5af8b6d1372c5",
+        measurementId: "G-6ZQK1XGSXZ"
+      };
+      firebase.initializeApp(firebaseConfig);
+      const db = firebase.firestore();
+
+      // Função para ouvir produtos em tempo real
+      function listenProducts(callback) {
+        db.collection('products').onSnapshot(snapshot => {
+          const products = [];
+          snapshot.forEach(doc => {
+            products.push({ id: doc.id, ...doc.data() });
+          });
+          callback(products);
+        });
+      }
+      // Adicionar produto
+      function addProduct(produto) {
+        return db.collection('products').add(produto);
+      }
+      // Editar produto
+      function updateProduct(id, produto) {
+        return db.collection('products').doc(id).update(produto);
+      }
+      // Remover produto
+      function deleteProduct(id) {
+        return db.collection('products').doc(id).delete();
+      }
+
+      // Função para ouvir fretes em tempo real
+      function listenShippingZones(callback) {
+        db.collection('shippingZones').onSnapshot(snapshot => {
+          const shippingZones = [];
+          snapshot.forEach(doc => {
+            shippingZones.push({ id: doc.id, ...doc.data() });
+          });
+          callback(shippingZones);
+        });
+      }
+      // Adicionar frete
+      function addShippingZone(zone) {
+        return db.collection('shippingZones').add(zone);
+      }
+      // Editar frete
+      function updateShippingZone(id, zone) {
+        return db.collection('shippingZones').doc(id).update(zone);
+      }
+      // Remover frete
+      function deleteShippingZone(id) {
+        return db.collection('shippingZones').doc(id).delete();
+      }
+    </script>
 </head>
 <body>
     <div id="app-root"></div>
@@ -1225,8 +1287,20 @@
 
         // --- Initialization ---
         document.addEventListener('DOMContentLoaded', () => {
-            loadProducts();
-            loadShippingZones();
+            // Substitua o carregamento de produtos do localStorage por:
+            listenProducts((produtos) => {
+              products = produtos;
+              // Chame a função que renderiza o catálogo e o admin
+              if (typeof renderCatalogPage === 'function' && window.location.hash.includes('catalogo')) renderCatalogPage();
+              if (typeof renderAdminPanel === 'function' && window.location.hash.includes('admin')) renderAdminPanel();
+            });
+            // Substitua o carregamento de shippingZones do localStorage por:
+            listenShippingZones((zones) => {
+              shippingZones = zones;
+              // Chame a função que renderiza a página de fretes e o admin
+              if (typeof renderShippingPage === 'function' && window.location.hash.includes('fretes')) renderShippingPage();
+              if (typeof renderAdminPanel === 'function' && window.location.hash.includes('admin')) renderAdminPanel();
+            });
             window.addEventListener('hashchange', handleRouteChange);
             renderApp(); // Initial render based on current hash
 
