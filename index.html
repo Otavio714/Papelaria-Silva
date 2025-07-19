@@ -102,13 +102,13 @@
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
     <script>
       const firebaseConfig = {
-        apiKey: "AIzaSyA5HcZDX38OYF8Jgxfbih6xzevNmeXbQX0",
-        authDomain: "papelariasilva-8cb5f.firebaseapp.com",
-        projectId: "papelariasilva-8cb5f",
-        storageBucket: "papelariasilva-8cb5f.appspot.com",
-        messagingSenderId: "474990545824",
-        appId: "1:474990545824:web:c519f520d5af8b6d1372c5",
-        measurementId: "G-6ZQK1XGSXZ"
+        apiKey: "AIzaSyDGTA055v0rFq70XDxL2541JUHWP5SPC74",
+        authDomain: "papelaria-silva-4da4d.firebaseapp.com",
+        projectId: "papelaria-silva-4da4d",
+        storageBucket: "papelaria-silva-4da4d.firebasestorage.app",
+        messagingSenderId: "869041335307",
+        appId: "1:869041335307:web:7f4919bc815d4841dfeb0e",
+        measurementId: "G-5F80MSWTHP"
       };
       firebase.initializeApp(firebaseConfig);
       const db = firebase.firestore();
@@ -227,61 +227,11 @@
 
         // --- Data Persistence (localStorage) ---
 
-        /**
-         * Loads products from localStorage or initializes with default data.
-         */
-        function loadProducts() {
-            const savedProducts = localStorage.getItem('products');
-            if (savedProducts) {
-                products = JSON.parse(savedProducts);
-            } else {
-                // Produtos fixos - você pode editar esta lista
-                products = [
-                    { id: '1', name: 'Caderno Universitário', price: 15.90, description: 'Caderno universitário 10 matérias, capa dura, 96 folhas', category: 'cadernos', image: 'https://placehold.co/192x192/E0E0E0/333333?text=Caderno' },
-                    { id: '2', name: 'Caneta Esferográfica Azul', price: 2.50, description: 'Caneta esferográfica azul, ponta fina, escrita suave', category: 'canetas', image: 'https://placehold.co/192x192/E0E0E0/333333?text=Caneta' },
-                    { id: '3', name: 'Borracha Branca', price: 1.80, description: 'Borracha macia, não mancha o papel, apaga limpo', category: 'borrachas', image: 'https://placehold.co/192x192/E0E0E0/333333?text=Borracha' },
-                    { id: '4', name: 'Lápis Grafite HB', price: 1.20, description: 'Lápis grafite HB com borracha na ponta, ideal para desenho', category: 'lapis', image: 'https://placehold.co/192x192/E0E0E0/333333?text=Lapis' },
-                    { id: '5', name: 'Pasta Plástica', price: 4.00, description: 'Pasta plástica com elástico, diversas cores disponíveis', category: 'pastas', image: 'https://placehold.co/192x192/E0E0E0/333333?text=Pasta' },
-                    { id: '6', name: 'Régua 30cm', price: 3.50, description: 'Régua transparente de 30cm, marcações precisas', category: 'utilitarios', image: 'https://placehold.co/192x192/E0E0E0/333333?text=Regua' },
-                    { id: '7', name: 'Tesoura Escolar', price: 8.90, description: 'Tesoura escolar com ponta arredondada, segura para crianças', category: 'utilitarios', image: 'https://placehold.co/192x192/E0E0E0/333333?text=Tesoura' },
-                    { id: '8', name: 'Cola Branca', price: 5.20, description: 'Cola branca 90g, secagem rápida, não tóxica', category: 'adesivos', image: 'https://placehold.co/192x192/E0E0E0/333333?text=Cola' }
-                ];
-                saveProducts();
-            }
-        }
-
-        /**
-         * Saves current products array to localStorage.
-         */
-        function saveProducts() {
-            localStorage.setItem('products', JSON.stringify(products));
-        }
-
-        /**
-         * Loads shipping zones from localStorage or initializes with default data.
-         */
-        function loadShippingZones() {
-            const savedZones = localStorage.getItem('shippingZones');
-            if (savedZones) {
-                shippingZones = JSON.parse(savedZones);
-            } else {
-                shippingZones = [
-                    { id: '1', neighborhood: 'Centro', price: 5.00 },
-                    { id: '2', neighborhood: 'Zona Norte', price: 8.00 },
-                    { id: '3', neighborhood: 'Zona Sul', price: 10.00 },
-                    { id: '4', neighborhood: 'Zona Leste', price: 12.00 },
-                    { id: '5', neighborhood: 'Zona Oeste', price: 15.00 }
-                ];
-                saveShippingZones();
-            }
-        }
-
-        /**
-         * Saves current shipping zones array to localStorage.
-         */
-        function saveShippingZones() {
-            localStorage.setItem('shippingZones', JSON.stringify(shippingZones));
-        }
+        // REMOVIDO: Funções de localStorage para produtos e fretes
+        // function loadProducts() { ... }
+        // function saveProducts() { ... }
+        // function loadShippingZones() { ... }
+        // function saveShippingZones() { ... }
 
         // --- Routing ---
 
@@ -531,11 +481,7 @@
             clearChildren(appRoot);
             appRoot.className = 'min-h-screen bg-gray-50'; // Reset background for this page
 
-            // Garantir que temos produtos para mostrar
-            if (!products || products.length === 0) {
-                console.log('Nenhum produto encontrado, carregando produtos padrão...');
-                loadProducts();
-            }
+
 
             appRoot.appendChild(renderHeader());
 
@@ -579,9 +525,6 @@
             let currentSelectedCategory = 'all';
 
             function filterAndRenderProducts() {
-                console.log('Renderizando produtos. Total:', products.length);
-                console.log('Produtos disponíveis:', products);
-                
                 let filtered = products;
 
                 if (currentSearchTerm) {
@@ -595,12 +538,9 @@
                     filtered = filtered.filter(product => product.category === currentSelectedCategory);
                 }
 
-                console.log('Produtos filtrados:', filtered.length);
-                
                 clearChildren(productGrid);
                 if (filtered.length === 0) {
                     noProductsFound.classList.remove('hidden');
-                    console.log('Nenhum produto encontrado');
                 } else {
                     noProductsFound.classList.add('hidden');
                     filtered.forEach(product => {
@@ -906,7 +846,7 @@
 
                         const deleteButton = createElement('button', 'inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-9 px-4 py-2 flex-1 sm:flex-none', '');
                         deleteButton.innerHTML = icons.trash2;
-                        deleteButton.addEventListener('click', () => deleteProduct(product.id));
+                        deleteButton.addEventListener('click', () => deleteProductFromAdmin(product.id));
 
                         actionsDiv.appendChild(editButton);
                         actionsDiv.appendChild(deleteButton);
@@ -1086,7 +1026,6 @@
 
                 function saveProductLogic(name, price, description, category, image) {
                     const newProduct = {
-                        id: currentEditingProduct ? currentEditingProduct.id : Date.now().toString(),
                         name,
                         price,
                         description,
@@ -1095,18 +1034,28 @@
                     };
 
                     if (currentEditingProduct) {
-                        // Atualizar produto existente no localStorage
-                        products = products.map(p => p.id === newProduct.id ? newProduct : p);
-                        showToast('Produto atualizado!', 'success');
+                        // Atualizar produto existente no Firebase
+                        updateProduct(currentEditingProduct.id, newProduct)
+                        .then(() => {
+                            showToast('Produto atualizado!', 'success');
+                            productDialogInstance.style.display = 'none';
+                        })
+                        .catch((error) => {
+                            console.error('Erro ao atualizar produto:', error);
+                            showToast('Erro ao atualizar produto!', 'error');
+                        });
                     } else {
-                        // Adicionar novo produto no localStorage
-                        products.push(newProduct);
-                        showToast('Produto adicionado!', 'success');
+                        // Adicionar novo produto no Firebase
+                        addProduct(newProduct)
+                        .then(() => {
+                            showToast('Produto adicionado!', 'success');
+                            productDialogInstance.style.display = 'none';
+                        })
+                        .catch((error) => {
+                            console.error('Erro ao adicionar produto:', error);
+                            showToast('Erro ao adicionar produto!', 'error');
+                        });
                     }
-                    
-                    saveProducts(); // Salvar no localStorage
-                    renderProductList(); // Re-renderizar a lista
-                    productDialogInstance.style.display = 'none';
                 }
 
                 actionsDiv.appendChild(cancelButton);
@@ -1119,12 +1068,16 @@
                 productDialogInstance.style.display = 'flex'; // Show the modal
             }
 
-            function deleteProduct(id) {
+            function deleteProductFromAdmin(id) {
                 if (confirm('Tem certeza que deseja remover este produto?')) {
-                    products = products.filter(p => p.id !== id);
-                    saveProducts(); // Salvar no localStorage
-                    showToast('Produto removido!', 'success');
-                    renderProductList();
+                    deleteProduct(id)
+                    .then(() => {
+                        showToast('Produto removido!', 'success');
+                    })
+                    .catch((error) => {
+                        console.error('Erro ao remover produto:', error);
+                        showToast('Erro ao remover produto!', 'error');
+                    });
                 }
             }
 
@@ -1178,7 +1131,7 @@
 
                         const deleteButton = createElement('button', 'inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-9 px-4 py-2 flex-1 sm:flex-none', '');
                         deleteButton.innerHTML = icons.trash2;
-                        deleteButton.addEventListener('click', () => deleteShipping(zone.id));
+                        deleteButton.addEventListener('click', () => deleteShippingFromAdmin(zone.id));
 
                         actionsDiv.appendChild(editButton);
                         actionsDiv.appendChild(deleteButton);
@@ -1242,21 +1195,33 @@
                     }
 
                     const newZone = {
-                        id: currentEditingShipping ? currentEditingShipping.id : Date.now().toString(),
                         neighborhood,
                         price
                     };
 
                     if (currentEditingShipping) {
-                        shippingZones = shippingZones.map(z => z.id === newZone.id ? newZone : z);
-                        showToast('Frete atualizado!', 'success');
+                        // Atualizar frete existente no Firebase
+                        updateShippingZone(currentEditingShipping.id, newZone)
+                        .then(() => {
+                            showToast('Frete atualizado!', 'success');
+                            shippingDialogInstance.style.display = 'none';
+                        })
+                        .catch((error) => {
+                            console.error('Erro ao atualizar frete:', error);
+                            showToast('Erro ao atualizar frete!', 'error');
+                        });
                     } else {
-                        shippingZones.push(newZone);
-                        showToast('Frete adicionado!', 'success');
+                        // Adicionar novo frete no Firebase
+                        addShippingZone(newZone)
+                        .then(() => {
+                            showToast('Frete adicionado!', 'success');
+                            shippingDialogInstance.style.display = 'none';
+                        })
+                        .catch((error) => {
+                            console.error('Erro ao adicionar frete:', error);
+                            showToast('Erro ao adicionar frete!', 'error');
+                        });
                     }
-                    saveShippingZones(); // Salvar no localStorage
-                    renderShippingList(); // Re-renderizar a lista
-                    shippingDialogInstance.style.display = 'none';
                 });
 
                 actionsDiv.appendChild(cancelButton);
@@ -1269,12 +1234,16 @@
                 shippingDialogInstance.style.display = 'flex';
             }
 
-            function deleteShipping(id) {
+            function deleteShippingFromAdmin(id) {
                 if (confirm('Tem certeza que deseja remover esta zona de frete?')) {
-                    shippingZones = shippingZones.filter(z => z.id !== id);
-                    saveShippingZones(); // Salvar no localStorage
-                    showToast('Frete removido!', 'success');
-                    renderShippingList();
+                    deleteShippingZone(id)
+                    .then(() => {
+                        showToast('Frete removido!', 'success');
+                    })
+                    .catch((error) => {
+                        console.error('Erro ao remover frete:', error);
+                        showToast('Erro ao remover frete!', 'error');
+                    });
                 }
             }
 
@@ -1306,18 +1275,60 @@
 
         // --- Initialization ---
         document.addEventListener('DOMContentLoaded', () => {
-            // Limpar localStorage para forçar carregamento dos produtos padrão
-            localStorage.removeItem('products');
-            localStorage.removeItem('shippingZones');
-            
-            // Carregar produtos e zonas de frete do localStorage
-            loadProducts();
-            loadShippingZones();
-            
-            // Debug: verificar se os produtos foram carregados
-            console.log('Produtos carregados:', products.length);
-            console.log('Produtos:', products);
-            
+            // Agora só usa Firebase para produtos e fretes
+            listenProducts((produtos) => {
+              products = produtos;
+              // Se não há produtos, adiciona alguns padrão
+              if (produtos.length === 0) {
+                console.log('Nenhum produto encontrado, adicionando produtos padrão...');
+                const produtosPadrao = [
+                  { name: 'Caderno Universitário', price: 15.90, description: 'Caderno universitário 10 matérias, capa dura, 96 folhas', category: 'cadernos', image: 'https://placehold.co/192x192/E0E0E0/333333?text=Caderno' },
+                  { name: 'Caneta Esferográfica Azul', price: 2.50, description: 'Caneta esferográfica azul, ponta fina, escrita suave', category: 'canetas', image: 'https://placehold.co/192x192/E0E0E0/333333?text=Caneta' },
+                  { name: 'Borracha Branca', price: 1.80, description: 'Borracha macia, não mancha o papel, apaga limpo', category: 'borrachas', image: 'https://placehold.co/192x192/E0E0E0/333333?text=Borracha' },
+                  { name: 'Lápis Grafite HB', price: 1.20, description: 'Lápis grafite HB com borracha na ponta, ideal para desenho', category: 'lapis', image: 'https://placehold.co/192x192/E0E0E0/333333?text=Lapis' },
+                  { name: 'Pasta Plástica', price: 4.00, description: 'Pasta plástica com elástico, diversas cores disponíveis', category: 'pastas', image: 'https://placehold.co/192x192/E0E0E0/333333?text=Pasta' }
+                ];
+                
+                // Adiciona produtos um por um
+                produtosPadrao.forEach(produto => {
+                  addProduct(produto).then(() => {
+                    console.log('Produto adicionado:', produto.name);
+                  }).catch(error => {
+                    console.error('Erro ao adicionar produto:', error);
+                  });
+                });
+              }
+              
+              // Atualiza catálogo e admin se estiverem na tela
+              if (typeof renderCatalogPage === 'function' && window.location.hash.includes('catalogo')) renderCatalogPage();
+              if (typeof renderAdminPanel === 'function' && window.location.hash.includes('admin')) renderAdminPanel();
+            });
+            listenShippingZones((zones) => {
+              shippingZones = zones;
+              // Se não há zonas de frete, adiciona algumas padrão
+              if (zones.length === 0) {
+                console.log('Nenhuma zona de frete encontrada, adicionando zonas padrão...');
+                const zonasPadrao = [
+                  { neighborhood: 'Centro', price: 5.00 },
+                  { neighborhood: 'Zona Norte', price: 8.00 },
+                  { neighborhood: 'Zona Sul', price: 10.00 },
+                  { neighborhood: 'Zona Leste', price: 12.00 },
+                  { neighborhood: 'Zona Oeste', price: 15.00 }
+                ];
+                
+                // Adiciona zonas um por uma
+                zonasPadrao.forEach(zona => {
+                  addShippingZone(zona).then(() => {
+                    console.log('Zona de frete adicionada:', zona.neighborhood);
+                  }).catch(error => {
+                    console.error('Erro ao adicionar zona de frete:', error);
+                  });
+                });
+              }
+              
+              if (typeof renderShippingPage === 'function' && window.location.hash.includes('fretes')) renderShippingPage();
+              if (typeof renderAdminPanel === 'function' && window.location.hash.includes('admin')) renderAdminPanel();
+            });
             window.addEventListener('hashchange', handleRouteChange);
             renderApp(); // Initial render based on current hash
 
