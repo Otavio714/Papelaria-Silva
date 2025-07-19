@@ -98,76 +98,67 @@
         }
     </style>
     <!-- Firebase SDK e configuração -->
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
-<script>
-  const firebaseConfig = {
-    apiKey: "AIzaSyA5HcZDX38OYF8Jgxfbih6xzevNmeXbQX0",
-    authDomain: "papelariasilva-8cb5f.firebaseapp.com",
-    projectId: "papelariasilva-8cb5f",
-    storageBucket: "papelariasilva-8cb5f.appspot.com",
-    messagingSenderId: "474990545824",
-    appId: "1:474990545824:web:c519f520d5af8b6d1372c5",
-    measurementId: "G-6ZQK1XGSXZ"
-  };
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+    <script>
+      const firebaseConfig = {
+        apiKey: "AIzaSyA5HcZDX38OYF8Jgxfbih6xzevNmeXbQX0",
+        authDomain: "papelariasilva-8cb5f.firebaseapp.com",
+        projectId: "papelariasilva-8cb5f",
+        storageBucket: "papelariasilva-8cb5f.appspot.com",
+        messagingSenderId: "474990545824",
+        appId: "1:474990545824:web:c519f520d5af8b6d1372c5",
+        measurementId: "G-6ZQK1XGSXZ"
+      };
+      firebase.initializeApp(firebaseConfig);
+      const db = firebase.firestore();
 
-  firebase.initializeApp(firebaseConfig);
-  const db = firebase.firestore();
+      // Função para ouvir produtos em tempo real
+      function listenProducts(callback) {
+        db.collection('products').onSnapshot(snapshot => {
+          const products = [];
+          snapshot.forEach(doc => {
+            products.push({ id: doc.id, ...doc.data() });
+          });
+          callback(products);
+        });
+      }
+      // Adicionar produto
+      function addProduct(produto) {
+        return db.collection('products').add(produto);
+      }
+      // Editar produto
+      function updateProduct(id, produto) {
+        return db.collection('products').doc(id).update(produto);
+      }
+      // Remover produto
+      function deleteProduct(id) {
+        return db.collection('products').doc(id).delete();
+      }
 
-  // Ouvir produtos em tempo real
-  function listenProducts(callback) {
-    db.collection('produtos').onSnapshot(snapshot => {
-      const products = [];
-      snapshot.forEach(doc => {
-        products.push({ id: doc.id, ...doc.data() });
-      });
-      callback(products);
-    });
-  }
-
-  // Adicionar produto
-  function addProduct(produto) {
-    return db.collection('produtos').add(produto);
-  }
-
-  // Editar produto
-  function updateProduct(id, produto) {
-    return db.collection('produtos').doc(id).update(produto);
-  }
-
-  // Remover produto
-  function deleteProduct(id) {
-    return db.collection('produtos').doc(id).delete();
-  }
-
-  // Ouvir fretes em tempo real
-  function listenShippingZones(callback) {
-    db.collection('shippingZones').onSnapshot(snapshot => {
-      const shippingZones = [];
-      snapshot.forEach(doc => {
-        shippingZones.push({ id: doc.id, ...doc.data() });
-      });
-      callback(shippingZones);
-    });
-  }
-
-  // Adicionar frete
-  function addShippingZone(zone) {
-    return db.collection('shippingZones').add(zone);
-  }
-
-  // Editar frete
-  function updateShippingZone(id, zone) {
-    return db.collection('shippingZones').doc(id).update(zone);
-  }
-
-  // Remover frete
-  function deleteShippingZone(id) {
-    return db.collection('shippingZones').doc(id).delete();
-  }
-</script>
-
-    
+      // Função para ouvir fretes em tempo real
+      function listenShippingZones(callback) {
+        db.collection('shippingZones').onSnapshot(snapshot => {
+          const shippingZones = [];
+          snapshot.forEach(doc => {
+            shippingZones.push({ id: doc.id, ...doc.data() });
+          });
+          callback(shippingZones);
+        });
+      }
+      // Adicionar frete
+      function addShippingZone(zone) {
+        return db.collection('shippingZones').add(zone);
+      }
+      // Editar frete
+      function updateShippingZone(id, zone) {
+        return db.collection('shippingZones').doc(id).update(zone);
+      }
+      // Remover frete
+      function deleteShippingZone(id) {
+        return db.collection('shippingZones').doc(id).delete();
+      }
+    </script>
 </head>
 <body>
     <div id="app-root"></div>
@@ -244,12 +235,16 @@
             if (savedProducts) {
                 products = JSON.parse(savedProducts);
             } else {
+                // Produtos fixos - você pode editar esta lista
                 products = [
-                    { id: '1', name: 'Caderno Universitário', price: 15.90, description: 'Caderno universitário 10 matérias', category: 'cadernos', image: 'https://placehold.co/192x192/E0E0E0/333333?text=Caderno' },
-                    { id: '2', name: 'Caneta Esferográfica', price: 2.50, description: 'Caneta esferográfica azul', category: 'canetas', image: 'https://placehold.co/192x192/E0E0E0/333333?text=Caneta' },
-                    { id: '3', name: 'Borracha Branca', price: 1.80, description: 'Borracha macia, não mancha', category: 'borrachas', image: 'https://placehold.co/192x192/E0E0E0/333333?text=Borracha' },
-                    { id: '4', name: 'Lápis Grafite HB', price: 1.20, description: 'Lápis grafite HB com borracha na ponta', category: 'lapis', image: 'https://placehold.co/192x192/E0E0E0/333333?text=Lapis' },
-                    { id: '5', name: 'Pasta Plástica', price: 4.00, description: 'Pasta plástica com elástico, diversas cores', category: 'pastas', image: 'https://placehold.co/192x192/E0E0E0/333333?text=Pasta' }
+                    { id: '1', name: 'Caderno Universitário', price: 15.90, description: 'Caderno universitário 10 matérias, capa dura, 96 folhas', category: 'cadernos', image: 'https://placehold.co/192x192/E0E0E0/333333?text=Caderno' },
+                    { id: '2', name: 'Caneta Esferográfica Azul', price: 2.50, description: 'Caneta esferográfica azul, ponta fina, escrita suave', category: 'canetas', image: 'https://placehold.co/192x192/E0E0E0/333333?text=Caneta' },
+                    { id: '3', name: 'Borracha Branca', price: 1.80, description: 'Borracha macia, não mancha o papel, apaga limpo', category: 'borrachas', image: 'https://placehold.co/192x192/E0E0E0/333333?text=Borracha' },
+                    { id: '4', name: 'Lápis Grafite HB', price: 1.20, description: 'Lápis grafite HB com borracha na ponta, ideal para desenho', category: 'lapis', image: 'https://placehold.co/192x192/E0E0E0/333333?text=Lapis' },
+                    { id: '5', name: 'Pasta Plástica', price: 4.00, description: 'Pasta plástica com elástico, diversas cores disponíveis', category: 'pastas', image: 'https://placehold.co/192x192/E0E0E0/333333?text=Pasta' },
+                    { id: '6', name: 'Régua 30cm', price: 3.50, description: 'Régua transparente de 30cm, marcações precisas', category: 'utilitarios', image: 'https://placehold.co/192x192/E0E0E0/333333?text=Regua' },
+                    { id: '7', name: 'Tesoura Escolar', price: 8.90, description: 'Tesoura escolar com ponta arredondada, segura para crianças', category: 'utilitarios', image: 'https://placehold.co/192x192/E0E0E0/333333?text=Tesoura' },
+                    { id: '8', name: 'Cola Branca', price: 5.20, description: 'Cola branca 90g, secagem rápida, não tóxica', category: 'adesivos', image: 'https://placehold.co/192x192/E0E0E0/333333?text=Cola' }
                 ];
                 saveProducts();
             }
@@ -536,6 +531,12 @@
             clearChildren(appRoot);
             appRoot.className = 'min-h-screen bg-gray-50'; // Reset background for this page
 
+            // Garantir que temos produtos para mostrar
+            if (!products || products.length === 0) {
+                console.log('Nenhum produto encontrado, carregando produtos padrão...');
+                loadProducts();
+            }
+
             appRoot.appendChild(renderHeader());
 
             const main = createElement('main', 'container mx-auto px-4 py-8');
@@ -578,6 +579,9 @@
             let currentSelectedCategory = 'all';
 
             function filterAndRenderProducts() {
+                console.log('Renderizando produtos. Total:', products.length);
+                console.log('Produtos disponíveis:', products);
+                
                 let filtered = products;
 
                 if (currentSearchTerm) {
@@ -591,9 +595,12 @@
                     filtered = filtered.filter(product => product.category === currentSelectedCategory);
                 }
 
+                console.log('Produtos filtrados:', filtered.length);
+                
                 clearChildren(productGrid);
                 if (filtered.length === 0) {
                     noProductsFound.classList.remove('hidden');
+                    console.log('Nenhum produto encontrado');
                 } else {
                     noProductsFound.classList.add('hidden');
                     filtered.forEach(product => {
@@ -1088,14 +1095,17 @@
                     };
 
                     if (currentEditingProduct) {
+                        // Atualizar produto existente no localStorage
                         products = products.map(p => p.id === newProduct.id ? newProduct : p);
                         showToast('Produto atualizado!', 'success');
                     } else {
+                        // Adicionar novo produto no localStorage
                         products.push(newProduct);
                         showToast('Produto adicionado!', 'success');
                     }
-                    saveProducts();
-                    renderProductList(); // Re-render the list
+                    
+                    saveProducts(); // Salvar no localStorage
+                    renderProductList(); // Re-renderizar a lista
                     productDialogInstance.style.display = 'none';
                 }
 
@@ -1110,9 +1120,9 @@
             }
 
             function deleteProduct(id) {
-                if (confirm('Tem certeza que deseja remover este produto?')) { // Using confirm for simplicity, would be a custom modal in production
+                if (confirm('Tem certeza que deseja remover este produto?')) {
                     products = products.filter(p => p.id !== id);
-                    saveProducts();
+                    saveProducts(); // Salvar no localStorage
                     showToast('Produto removido!', 'success');
                     renderProductList();
                 }
@@ -1244,8 +1254,8 @@
                         shippingZones.push(newZone);
                         showToast('Frete adicionado!', 'success');
                     }
-                    saveShippingZones();
-                    renderShippingList(); // Re-render the list
+                    saveShippingZones(); // Salvar no localStorage
+                    renderShippingList(); // Re-renderizar a lista
                     shippingDialogInstance.style.display = 'none';
                 });
 
@@ -1260,9 +1270,9 @@
             }
 
             function deleteShipping(id) {
-                if (confirm('Tem certeza que deseja remover esta zona de frete?')) { // Using confirm for simplicity
+                if (confirm('Tem certeza que deseja remover esta zona de frete?')) {
                     shippingZones = shippingZones.filter(z => z.id !== id);
-                    saveShippingZones();
+                    saveShippingZones(); // Salvar no localStorage
                     showToast('Frete removido!', 'success');
                     renderShippingList();
                 }
@@ -1296,20 +1306,18 @@
 
         // --- Initialization ---
         document.addEventListener('DOMContentLoaded', () => {
-            // Substitua o carregamento de produtos do localStorage por:
-            listenProducts((produtos) => {
-              products = produtos;
-              // Chame a função que renderiza o catálogo e o admin
-              if (typeof renderCatalogPage === 'function' && window.location.hash.includes('catalogo')) renderCatalogPage();
-              if (typeof renderAdminPanel === 'function' && window.location.hash.includes('admin')) renderAdminPanel();
-            });
-            // Substitua o carregamento de shippingZones do localStorage por:
-            listenShippingZones((zones) => {
-              shippingZones = zones;
-              // Chame a função que renderiza a página de fretes e o admin
-              if (typeof renderShippingPage === 'function' && window.location.hash.includes('fretes')) renderShippingPage();
-              if (typeof renderAdminPanel === 'function' && window.location.hash.includes('admin')) renderAdminPanel();
-            });
+            // Limpar localStorage para forçar carregamento dos produtos padrão
+            localStorage.removeItem('products');
+            localStorage.removeItem('shippingZones');
+            
+            // Carregar produtos e zonas de frete do localStorage
+            loadProducts();
+            loadShippingZones();
+            
+            // Debug: verificar se os produtos foram carregados
+            console.log('Produtos carregados:', products.length);
+            console.log('Produtos:', products);
+            
             window.addEventListener('hashchange', handleRouteChange);
             renderApp(); // Initial render based on current hash
 
