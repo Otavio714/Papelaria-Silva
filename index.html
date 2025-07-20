@@ -36,6 +36,7 @@
             background-color: rgba(0,0,0,0.4); /* Black w/ opacity */
             justify-content: center;
             align-items: center;
+            transition: opacity 0.2s ease-in-out, transform 0.2s ease-in-out;
         }
         .modal-content {
             background-color: #fefefe;
@@ -73,6 +74,63 @@
             display: flex;
             flex-direction: column;
             gap: 0.5rem;
+        }
+
+        /* Loading animation styles */
+        .loading-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+            min-height: 200px;
+        }
+
+        .loading-spinner {
+            width: 50px;
+            height: 50px;
+            border: 4px solid #e5e7eb;
+            border-top: 4px solid #8b5cf6;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 1rem;
+        }
+
+        .loading-text {
+            color: #6b7280;
+            font-size: 1rem;
+            font-weight: 500;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .loading-pulse {
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        /* Page entrance animations */
+        .fade-in {
+            opacity: 0;
+            animation: fadeIn 0.8s ease-in-out forwards;
+        }
+
+        @keyframes fadeIn {
+            from { 
+                opacity: 0; 
+                transform: translateY(10px);
+            }
+            to { 
+                opacity: 1; 
+                transform: translateY(0);
+            }
         }
         .toast {
             padding: 0.75rem 1rem;
@@ -158,6 +216,29 @@
       function deleteShippingZone(id) {
         return db.collection('shippingZones').doc(id).delete();
       }
+
+      // Função para ouvir categorias em tempo real
+      function listenCategories(callback) {
+        db.collection('categories').onSnapshot(snapshot => {
+          const categories = [];
+          snapshot.forEach(doc => {
+            categories.push({ id: doc.id, ...doc.data() });
+          });
+          callback(categories);
+        });
+      }
+      // Adicionar categoria
+      function addCategory(category) {
+        return db.collection('categories').add(category);
+      }
+      // Editar categoria
+      function updateCategory(id, category) {
+        return db.collection('categories').doc(id).update(category);
+      }
+      // Remover categoria
+      function deleteCategory(id) {
+        return db.collection('categories').doc(id).delete();
+      }
     </script>
 </head>
 <body>
@@ -168,7 +249,9 @@
         // Global state variables
         let products = [];
         let shippingZones = [];
+        let categories = [];
         let isAuthenticated = false;
+        let activeTab = 'dashboard'; // Global active tab for admin panel
         const ADMIN_PASSWORD = 'admin123'; // You can change this
         let currentPath = window.location.hash.slice(1) || '/'; // Get path from hash or default to '/'
 
@@ -271,7 +354,7 @@
 
         // --- Header Component ---
         function renderHeader() {
-            const header = createElement('header', 'bg-white shadow-sm border-b');
+            const header = createElement('header', 'bg-white shadow-sm border-b fade-in');
             const container = createElement('div', 'container mx-auto px-4 py-4');
             const flexContainer = createElement('div', 'flex items-center justify-between');
 
@@ -429,10 +512,10 @@
             const main = createElement('main', 'container mx-auto px-4 py-8 md:py-16 relative z-10'); // Added relative z-10
             const textCenter = createElement('div', 'text-center text-white');
 
-            const h1 = createElement('h1', 'text-4xl md:text-6xl font-bold mb-4');
+            const h1 = createElement('h1', 'text-4xl md:text-6xl font-bold mb-4 fade-in');
             h1.innerHTML = 'SILVA<span class="block text-3xl md:text-5xl">BAZAR E PAPELARIA</span>';
 
-            const p = createElement('p', 'text-lg md:text-xl mb-8 opacity-90 px-4', 'Encontre tudo para sua papelaria, escritório e muito mais. Confira nosso catálogo!');
+            const p = createElement('p', 'text-lg md:text-xl mb-8 opacity-90 px-4 fade-in', 'Encontre tudo para sua papelaria, escritório e muito mais. Confira nosso catálogo!');
 
             const buttonGroup = createElement('div', 'flex flex-col sm:flex-row justify-center space-y-4 sm:space-y-0 sm:space-x-4 px-4');
 
@@ -442,7 +525,7 @@
                 e.preventDefault();
                 navigateTo('/catalogo');
             });
-            const catalogButton = createElement('button', 'inline-flex items-center justify-center whitespace-nowrap rounded-md text-lg font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-white text-purple-900 hover:bg-gray-100 h-12 px-6 w-full sm:w-auto', 'Ver Catálogo');
+            const catalogButton = createElement('button', 'inline-flex items-center justify-center whitespace-nowrap rounded-md text-lg font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-white text-purple-900 hover:bg-gray-100 h-12 px-6 w-full sm:w-auto fade-in', 'Ver Catálogo');
             const packageIcon = createElement('span', 'mr-2 h-5 w-5');
             packageIcon.innerHTML = icons.package;
             catalogButton.prepend(packageIcon);
@@ -454,7 +537,7 @@
                 e.preventDefault();
                 navigateTo('/fretes');
             });
-            const shippingButton = createElement('button', 'inline-flex items-center justify-center whitespace-nowrap rounded-md text-lg font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-transparent text-white border-white hover:bg-white hover:text-purple-900 h-12 px-6 w-full sm:w-auto', 'Consultar Frete');
+            const shippingButton = createElement('button', 'inline-flex items-center justify-center whitespace-nowrap rounded-md text-lg font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-transparent text-white border-white hover:bg-white hover:text-purple-900 h-12 px-6 w-full sm:w-auto fade-in', 'Consultar Frete');
             const truckIcon = createElement('span', 'mr-2 h-5 w-5');
             truckIcon.innerHTML = icons.truck;
             shippingButton.prepend(truckIcon);
@@ -487,7 +570,7 @@
 
             const main = createElement('main', 'container mx-auto px-4 py-8');
             const sectionHeader = createElement('div', 'mb-8');
-            const h1 = createElement('h1', 'text-3xl font-bold text-gray-900 mb-4', 'Catálogo de Produtos');
+            const h1 = createElement('h1', 'text-3xl font-bold text-gray-900 mb-4 fade-in', 'Catálogo de Produtos');
 
             const filterControls = createElement('div', 'flex flex-col md:flex-row gap-4 mb-6');
             const searchInputDiv = createElement('div', 'flex-1');
@@ -513,10 +596,15 @@
             const productGrid = createElement('div', 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6');
             main.appendChild(productGrid);
 
+            // Loading animation
+            const loadingContainer = createElement('div', 'loading-container');
+            const loadingSpinner = createElement('div', 'loading-spinner');
+            const loadingText = createElement('p', 'loading-text loading-pulse', 'Carregando produtos...');
+            loadingContainer.appendChild(loadingSpinner);
+            loadingContainer.appendChild(loadingText);
+            main.appendChild(loadingContainer);
+
             const noProductsFound = createElement('div', 'text-center py-16 hidden');
-            const packageIcon = createElement('span', 'h-16 w-16 text-gray-400 mx-auto mb-4');
-            packageIcon.innerHTML = icons.package;
-            noProductsFound.appendChild(packageIcon);
             noProductsFound.appendChild(createElement('h3', 'text-xl font-semibold text-gray-600 mb-2', 'Nenhum produto encontrado'));
             noProductsFound.appendChild(createElement('p', 'text-gray-500', 'Tente ajustar sua busca ou categoria.'));
             main.appendChild(noProductsFound);
@@ -525,6 +613,19 @@
             let currentSelectedCategory = 'all';
 
             function filterAndRenderProducts() {
+                // Mostra loading se não há produtos ainda
+                if (products.length === 0) {
+                    loadingContainer.style.display = 'flex';
+                    productGrid.style.display = 'none';
+                    noProductsFound.classList.add('hidden');
+                    return;
+                }
+
+                // Esconde loading quando há produtos
+                loadingContainer.style.display = 'none';
+                productGrid.style.display = 'grid';
+                noProductsFound.classList.add('hidden'); // Garante que a mensagem está escondida
+
                 let filtered = products;
 
                 if (currentSearchTerm) {
@@ -543,8 +644,11 @@
                     noProductsFound.classList.remove('hidden');
                 } else {
                     noProductsFound.classList.add('hidden');
-                    filtered.forEach(product => {
-                        const card = createElement('div', 'bg-white rounded-lg shadow-sm hover:shadow-lg transition-shadow');
+                    filtered.forEach((product, index) => {
+                        const card = createElement('div', 'bg-white rounded-lg shadow-sm hover:shadow-lg transition-shadow fade-in');
+                        card.style.animationDelay = `${index * 0.1}s`;
+                        // Força o reflow para garantir que a animação seja aplicada
+                        card.offsetHeight;
                         const cardHeader = createElement('div', 'p-4');
                         const img = createElement('img', 'w-full h-48 object-contain rounded-md bg-white', '', { src: product.image, alt: product.name });
                         cardHeader.appendChild(img);
@@ -598,7 +702,7 @@
 
             const main = createElement('main', 'container mx-auto px-4 py-8');
             const maxWidthDiv = createElement('div', 'max-w-4xl mx-auto');
-            const h1 = createElement('h1', 'text-3xl font-bold text-gray-900 mb-8', 'Consulta de Fretes');
+            const h1 = createElement('h1', 'text-3xl font-bold text-gray-900 mb-8 fade-in', 'Consulta de Fretes');
 
             const card = createElement('div', 'bg-white rounded-lg shadow-sm mb-8');
             const cardHeader = createElement('div', 'flex flex-col space-y-1.5 p-6');
@@ -619,13 +723,35 @@
             const zonesGrid = createElement('div', 'grid gap-4');
             cardContent.appendChild(zonesGrid);
 
+            // Loading animation for shipping
+            const shippingLoadingContainer = createElement('div', 'loading-container');
+            const shippingLoadingSpinner = createElement('div', 'loading-spinner');
+            const shippingLoadingText = createElement('p', 'loading-text loading-pulse', 'Carregando zonas de frete...');
+            shippingLoadingContainer.appendChild(shippingLoadingSpinner);
+            shippingLoadingContainer.appendChild(shippingLoadingText);
+            cardContent.appendChild(shippingLoadingContainer);
+
             const noZoneFound = createElement('div', 'text-center py-8 hidden');
-            noZoneFound.appendChild(createElement('p', 'text-gray-500', 'Bairro não encontrado. Entre em contato conosco!'));
+            noZoneFound.appendChild(createElement('h3', 'text-lg font-semibold text-gray-600 mb-2', 'Bairro não encontrado'));
+            noZoneFound.appendChild(createElement('p', 'text-gray-500', 'Entre em contato conosco!'));
             cardContent.appendChild(noZoneFound);
 
             let currentSearchTerm = '';
 
             function filterAndRenderShippingZones() {
+                // Mostra loading se não há zonas ainda
+                if (shippingZones.length === 0) {
+                    shippingLoadingContainer.style.display = 'flex';
+                    zonesGrid.style.display = 'none';
+                    noZoneFound.classList.add('hidden');
+                    return;
+                }
+
+                // Esconde loading quando há zonas
+                shippingLoadingContainer.style.display = 'none';
+                zonesGrid.style.display = 'grid';
+                noZoneFound.classList.add('hidden'); // Garante que a mensagem está escondida
+
                 let filtered = shippingZones.filter(zone =>
                     zone.neighborhood.toLowerCase().includes(currentSearchTerm.toLowerCase())
                 );
@@ -635,8 +761,11 @@
                     noZoneFound.classList.remove('hidden');
                 } else {
                     noZoneFound.classList.add('hidden');
-                    filtered.forEach(zone => {
-                        const zoneDiv = createElement('div', 'flex items-center justify-between p-4 bg-gray-50 rounded-lg');
+                    filtered.forEach((zone, index) => {
+                        const zoneDiv = createElement('div', 'flex items-center justify-between p-4 bg-gray-50 rounded-lg fade-in');
+                        zoneDiv.style.animationDelay = `${index * 0.1}s`;
+                        // Força o reflow para garantir que a animação seja aplicada
+                        zoneDiv.offsetHeight;
                         zoneDiv.appendChild(createElement('span', 'font-medium text-gray-900', zone.neighborhood));
                         zoneDiv.appendChild(createElement('span', 'text-lg font-bold text-purple-600', 'R$ ' + zone.price.toFixed(2)));
                         zonesGrid.appendChild(zoneDiv);
@@ -677,7 +806,17 @@
             const h1 = createElement('h1', 'text-xl md:text-2xl font-bold text-gray-900', 'Painel Administrativo');
 
             const buttonGroup = createElement('div', 'flex flex-wrap gap-2');
-            let activeTab = 'products'; // Default active tab for admin
+            // activeTab is now global, no need to redeclare
+
+            const dashboardTabButton = createElement('button', 'inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 h-9 px-4 py-2 ' + (activeTab === 'dashboard' ? 'bg-primary text-primary-foreground hover:bg-primary/90' : 'border border-input bg-background hover:bg-accent hover:text-accent-foreground'), 'Dashboard');
+            const dashboardIcon = createElement('span', 'mr-1 md:mr-2 h-4 w-4');
+            dashboardIcon.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>`;
+            dashboardTabButton.prepend(dashboardIcon);
+            dashboardTabButton.addEventListener('click', () => {
+                activeTab = 'dashboard';
+                renderAdminPanelContent();
+                updateTabButtons();
+            });
 
             const productTabButton = createElement('button', 'inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 h-9 px-4 py-2 ' + (activeTab === 'products' ? 'bg-primary text-primary-foreground hover:bg-primary/90' : 'border border-input bg-background hover:bg-accent hover:text-accent-foreground'), 'Produtos');
             const productIcon = createElement('span', 'mr-1 md:mr-2 h-4 w-4');
@@ -702,6 +841,7 @@
             const logoutButton = createElement('button', 'inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-9 px-4 py-2', 'Sair');
             logoutButton.addEventListener('click', handleLogout);
 
+            buttonGroup.appendChild(dashboardTabButton);
             buttonGroup.appendChild(productTabButton);
             buttonGroup.appendChild(shippingTabButton);
             buttonGroup.appendChild(logoutButton);
@@ -716,6 +856,7 @@
             appRoot.appendChild(mainContentArea);
 
             function updateTabButtons() {
+                dashboardTabButton.className = 'inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 h-9 px-4 py-2 ' + (activeTab === 'dashboard' ? 'bg-primary text-primary-foreground hover:bg-primary/90' : 'border border-input bg-background hover:bg-accent hover:text-accent-foreground');
                 productTabButton.className = 'inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 h-9 px-4 py-2 ' + (activeTab === 'products' ? 'bg-primary text-primary-foreground hover:bg-primary/90' : 'border border-input bg-background hover:bg-accent hover:text-accent-foreground');
                 shippingTabButton.className = 'inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 h-9 px-4 py-2 ' + (activeTab === 'shipping' ? 'bg-primary text-primary-foreground hover:bg-primary/90' : 'border border-input bg-background hover:bg-accent hover:text-accent-foreground');
             }
@@ -723,7 +864,9 @@
             function renderAdminPanelContent() {
                 clearChildren(mainContentArea); // Clear previous content
 
-                if (activeTab === 'products') {
+                if (activeTab === 'dashboard') {
+                    renderDashboard(mainContentArea);
+                } else if (activeTab === 'products') {
                     renderProductManagement(mainContentArea);
                 } else if (activeTab === 'shipping') {
                     renderShippingManagement(mainContentArea);
@@ -731,6 +874,17 @@
             }
 
             renderAdminPanelContent(); // Initial render of content
+            
+            // Função para atualizar apenas o conteúdo da aba ativa sem re-renderizar todo o painel
+            window.updateAdminContent = function() {
+                if (activeTab === 'dashboard') {
+                    renderDashboard(mainContentArea);
+                } else if (activeTab === 'products') {
+                    renderProductManagement(mainContentArea);
+                } else if (activeTab === 'shipping') {
+                    renderShippingManagement(mainContentArea);
+                }
+            };
         }
 
         // --- Admin Login ---
@@ -795,70 +949,566 @@
             navigateTo('/');
         }
 
+        // --- Dashboard Component ---
+        function renderDashboard(parentDiv) {
+            const dashboardDiv = createElement('div', 'space-y-6');
+            
+            // Header
+            const headerDiv = createElement('div', 'mb-6');
+            headerDiv.appendChild(createElement('h2', 'text-2xl font-bold text-gray-900', 'Dashboard'));
+            headerDiv.appendChild(createElement('p', 'text-gray-600', 'Visão geral da sua papelaria'));
+            dashboardDiv.appendChild(headerDiv);
+
+            // Stats Grid
+            const statsGrid = createElement('div', 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8');
+            
+            // Total Products
+            const totalProductsCard = createElement('div', 'bg-white rounded-lg shadow-sm p-6 fade-in border border-gray-100');
+            const totalProductsContent = createElement('div', 'flex items-center justify-between');
+            const totalProductsIcon = createElement('div', 'p-3 bg-blue-100 rounded-xl');
+            totalProductsIcon.innerHTML = icons.package;
+            const totalProductsText = createElement('div', 'text-right');
+            totalProductsText.appendChild(createElement('p', 'text-sm font-medium text-gray-600 mb-1', 'Total de Produtos'));
+            totalProductsText.appendChild(createElement('p', 'text-3xl font-bold text-gray-900', products.length.toString()));
+            totalProductsContent.appendChild(totalProductsIcon);
+            totalProductsContent.appendChild(totalProductsText);
+            totalProductsCard.appendChild(totalProductsContent);
+            statsGrid.appendChild(totalProductsCard);
+
+            // Total Categories
+            const totalCategoriesCard = createElement('div', 'bg-white rounded-lg shadow-sm p-6 fade-in border border-gray-100');
+            const totalCategoriesContent = createElement('div', 'flex items-center justify-between');
+            const totalCategoriesIcon = createElement('div', 'p-3 bg-green-100 rounded-xl');
+            totalCategoriesIcon.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3h18v18H3z"/><path d="M9 9h6v6H9z"/></svg>`;
+            const totalCategoriesText = createElement('div', 'text-right');
+            totalCategoriesText.appendChild(createElement('p', 'text-sm font-medium text-gray-600 mb-1', 'Categorias'));
+            totalCategoriesText.appendChild(createElement('p', 'text-3xl font-bold text-gray-900', categories.length.toString()));
+            totalCategoriesContent.appendChild(totalCategoriesIcon);
+            totalCategoriesContent.appendChild(totalCategoriesText);
+            totalCategoriesCard.appendChild(totalCategoriesContent);
+            statsGrid.appendChild(totalCategoriesCard);
+
+            // Total Shipping Zones
+            const totalShippingCard = createElement('div', 'bg-white rounded-lg shadow-sm p-6 fade-in border border-gray-100');
+            const totalShippingContent = createElement('div', 'flex items-center justify-between');
+            const totalShippingIcon = createElement('div', 'p-3 bg-purple-100 rounded-xl');
+            totalShippingIcon.innerHTML = icons.truck;
+            const totalShippingText = createElement('div', 'text-right');
+            totalShippingText.appendChild(createElement('p', 'text-sm font-medium text-gray-600 mb-1', 'Zonas de Frete'));
+            totalShippingText.appendChild(createElement('p', 'text-3xl font-bold text-gray-900', shippingZones.length.toString()));
+            totalShippingContent.appendChild(totalShippingIcon);
+            totalShippingContent.appendChild(totalShippingText);
+            totalShippingCard.appendChild(totalShippingContent);
+            statsGrid.appendChild(totalShippingCard);
+
+            // Average Price
+            const avgPriceCard = createElement('div', 'bg-white rounded-lg shadow-sm p-6 fade-in border border-gray-100');
+            const avgPriceContent = createElement('div', 'flex items-center justify-between');
+            const avgPriceIcon = createElement('div', 'p-3 bg-yellow-100 rounded-xl');
+            avgPriceIcon.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8"/><path d="M12 6v2m0 8v2"/></svg>`;
+            const avgPriceText = createElement('div', 'text-right');
+            avgPriceText.appendChild(createElement('p', 'text-sm font-medium text-gray-600 mb-1', 'Preço Médio'));
+            const avgPrice = products.length > 0 ? (products.reduce((sum, p) => sum + p.price, 0) / products.length).toFixed(2) : '0.00';
+            avgPriceText.appendChild(createElement('p', 'text-3xl font-bold text-gray-900', 'R$ ' + avgPrice));
+            avgPriceContent.appendChild(avgPriceIcon);
+            avgPriceContent.appendChild(avgPriceText);
+            avgPriceCard.appendChild(avgPriceContent);
+            statsGrid.appendChild(avgPriceCard);
+
+            dashboardDiv.appendChild(statsGrid);
+
+            // Content Grid (Stats + Recent Products)
+            const contentGrid = createElement('div', 'grid grid-cols-1 lg:grid-cols-3 gap-6');
+            
+            // Recent Products (takes 2 columns)
+            const recentProductsDiv = createElement('div', 'bg-white rounded-lg shadow-sm p-6 border border-gray-100 lg:col-span-2');
+            const recentProductsHeader = createElement('div', 'flex items-center justify-between mb-6');
+            recentProductsHeader.appendChild(createElement('h3', 'text-xl font-semibold text-gray-900', 'Produtos Recentes'));
+            recentProductsHeader.appendChild(createElement('p', 'text-sm text-gray-500', `${products.length} produtos no total`));
+            recentProductsDiv.appendChild(recentProductsHeader);
+            
+            if (products.length === 0) {
+                const emptyState = createElement('div', 'text-center py-8');
+                const emptyIcon = createElement('div', 'w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4');
+                emptyIcon.innerHTML = icons.package;
+                emptyState.appendChild(emptyIcon);
+                emptyState.appendChild(createElement('p', 'text-gray-500 font-medium', 'Nenhum produto cadastrado ainda.'));
+                emptyState.appendChild(createElement('p', 'text-sm text-gray-400 mt-1', 'Adicione seu primeiro produto!'));
+                recentProductsDiv.appendChild(emptyState);
+            } else {
+                const recentProductsList = createElement('div', 'space-y-4');
+                const recentProducts = products.slice(-5).reverse(); // Últimos 5 produtos
+                recentProducts.forEach((product, index) => {
+                    const productItem = createElement('div', 'flex items-center space-x-4 p-4 bg-gray-50 rounded-xl border border-gray-100 hover:bg-gray-100 transition-colors fade-in');
+                    productItem.style.animationDelay = `${index * 0.1}s`;
+                    const productImg = createElement('img', 'w-16 h-16 object-cover rounded-lg bg-white shadow-sm', '', { src: product.image, alt: product.name });
+                    const productInfo = createElement('div', 'flex-1 min-w-0');
+                    productInfo.appendChild(createElement('p', 'font-semibold text-gray-900 truncate', product.name));
+                    productInfo.appendChild(createElement('p', 'text-sm text-gray-600 line-clamp-2', product.description));
+                    const priceInfo = createElement('div', 'flex items-center justify-between mt-2');
+                    priceInfo.appendChild(createElement('p', 'text-lg font-bold text-purple-600', 'R$ ' + product.price.toFixed(2)));
+                    if (product.category) {
+                        priceInfo.appendChild(createElement('span', 'px-2 py-1 bg-purple-100 text-purple-700 text-xs font-medium rounded-full', product.category));
+                    }
+                    productInfo.appendChild(priceInfo);
+                    productItem.appendChild(productImg);
+                    productItem.appendChild(productInfo);
+                    recentProductsList.appendChild(productItem);
+                });
+                recentProductsDiv.appendChild(recentProductsList);
+            }
+
+            // Quick Summary (takes 1 column)
+            const quickSummaryDiv = createElement('div', 'bg-white rounded-lg shadow-sm p-6 border border-gray-100');
+            const quickSummaryHeader = createElement('div', 'mb-6');
+            quickSummaryHeader.appendChild(createElement('h3', 'text-xl font-semibold text-gray-900', 'Resumo Rápido'));
+            quickSummaryHeader.appendChild(createElement('p', 'text-sm text-gray-500', 'Informações importantes'));
+            quickSummaryDiv.appendChild(quickSummaryHeader);
+
+            const summaryList = createElement('div', 'space-y-4');
+            
+            // Most expensive product
+            if (products.length > 0) {
+                const mostExpensive = products.reduce((max, p) => p.price > max.price ? p : max);
+                const expensiveItem = createElement('div', 'p-4 bg-red-50 rounded-lg border border-red-100');
+                expensiveItem.appendChild(createElement('p', 'text-sm font-medium text-red-700', 'Produto Mais Caro'));
+                expensiveItem.appendChild(createElement('p', 'text-lg font-bold text-red-900', mostExpensive.name));
+                expensiveItem.appendChild(createElement('p', 'text-sm text-red-600', 'R$ ' + mostExpensive.price.toFixed(2)));
+                summaryList.appendChild(expensiveItem);
+            }
+
+            // Cheapest product
+            if (products.length > 0) {
+                const cheapest = products.reduce((min, p) => p.price < min.price ? p : min);
+                const cheapItem = createElement('div', 'p-4 bg-green-50 rounded-lg border border-green-100');
+                cheapItem.appendChild(createElement('p', 'text-sm font-medium text-green-700', 'Produto Mais Barato'));
+                cheapItem.appendChild(createElement('p', 'text-lg font-bold text-green-900', cheapest.name));
+                cheapItem.appendChild(createElement('p', 'text-sm text-green-600', 'R$ ' + cheapest.price.toFixed(2)));
+                summaryList.appendChild(cheapItem);
+            }
+
+            // Categories summary
+            if (categories.length > 0) {
+                const categoriesItem = createElement('div', 'p-4 bg-blue-50 rounded-lg border border-blue-100');
+                categoriesItem.appendChild(createElement('p', 'text-sm font-medium text-blue-700', 'Categorias Disponíveis'));
+                const categoriesList = createElement('div', 'mt-2 space-y-1');
+                categories.slice(0, 3).forEach(cat => {
+                    categoriesList.appendChild(createElement('p', 'text-sm text-blue-600', '• ' + cat.name));
+                });
+                if (categories.length > 3) {
+                    categoriesList.appendChild(createElement('p', 'text-xs text-blue-500', `+${categories.length - 3} mais...`));
+                }
+                categoriesItem.appendChild(categoriesList);
+                summaryList.appendChild(categoriesItem);
+            }
+
+            quickSummaryDiv.appendChild(summaryList);
+            contentGrid.appendChild(recentProductsDiv);
+            contentGrid.appendChild(quickSummaryDiv);
+            dashboardDiv.appendChild(contentGrid);
+
+            parentDiv.appendChild(dashboardDiv);
+        }
+
         // --- Product Management (Admin) ---
         function renderProductManagement(parentDiv) {
             const productManagementDiv = createElement('div', '');
-            const headerDiv = createElement('div', 'flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-4');
-            const h2 = createElement('h2', 'text-xl font-semibold', 'Gerenciar Produtos');
+            
+            // Tabs for Products and Categories
+            const tabsDiv = createElement('div', 'border-b border-gray-200 mb-6');
+            const tabsContainer = createElement('div', 'flex space-x-8');
+            
+            let activeProductTab = 'products';
+            
+            const productsTabButton = createElement('button', 'py-2 px-1 border-b-2 font-medium text-sm ' + (activeProductTab === 'products' ? 'border-purple-500 text-purple-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'), 'Produtos');
+            const categoriesTabButton = createElement('button', 'py-2 px-1 border-b-2 font-medium text-sm ' + (activeProductTab === 'categories' ? 'border-purple-500 text-purple-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'), 'Categorias');
+            
+            productsTabButton.addEventListener('click', () => {
+                activeProductTab = 'products';
+                renderProductContent();
+                updateProductTabButtons();
+            });
+            
+            categoriesTabButton.addEventListener('click', () => {
+                activeProductTab = 'categories';
+                renderProductContent();
+                updateProductTabButtons();
+            });
+            
+            tabsContainer.appendChild(productsTabButton);
+            tabsContainer.appendChild(categoriesTabButton);
+            tabsDiv.appendChild(tabsContainer);
+            productManagementDiv.appendChild(tabsDiv);
+            
+            // Content area
+            const contentArea = createElement('div', '');
+            productManagementDiv.appendChild(contentArea);
+            
+            function updateProductTabButtons() {
+                productsTabButton.className = 'py-2 px-1 border-b-2 font-medium text-sm ' + (activeProductTab === 'products' ? 'border-purple-500 text-purple-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300');
+                categoriesTabButton.className = 'py-2 px-1 border-b-2 font-medium text-sm ' + (activeProductTab === 'categories' ? 'border-purple-500 text-purple-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300');
+            }
+            
+            function renderProductContent() {
+                clearChildren(contentArea);
+                
+                if (activeProductTab === 'products') {
+                    renderProductsTab(contentArea);
+                } else if (activeProductTab === 'categories') {
+                    renderCategoriesTab(contentArea);
+                }
+            }
+            
+            function renderProductsTab(parentDiv) {
+                const headerDiv = createElement('div', 'flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-4');
+                const h2 = createElement('h2', 'text-xl font-semibold', 'Gerenciar Produtos');
 
-            const addProductButton = createElement('button', 'inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-9 px-4 py-2 mb-2', 'Adicionar Produto');
-            const plusIcon = createElement('span', 'mr-2 h-4 w-4');
-            plusIcon.innerHTML = icons.plus;
-            addProductButton.prepend(plusIcon);
-            addProductButton.addEventListener('click', () => showProductDialog());
+                const addProductButton = createElement('button', 'inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-9 px-4 py-2 mb-2', 'Adicionar Produto');
+                const plusIcon = createElement('span', 'mr-2 h-4 w-4');
+                plusIcon.innerHTML = icons.plus;
+                addProductButton.prepend(plusIcon);
+                addProductButton.addEventListener('click', () => showProductDialog());
 
-            headerDiv.appendChild(h2);
-            headerDiv.appendChild(addProductButton);
-            productManagementDiv.appendChild(headerDiv);
+                headerDiv.appendChild(h2);
+                headerDiv.appendChild(addProductButton);
+                parentDiv.appendChild(headerDiv);
+
+                const productListGrid = createElement('div', 'grid gap-4');
+                parentDiv.appendChild(productListGrid);
+
+                // Função para renderizar a lista de produtos na aba de produtos
+                function renderProductsTabContent() {
+                    clearChildren(productListGrid);
+                    if (products.length === 0) {
+                        const noProductsDiv = createElement('div', 'text-center py-8 col-span-full');
+                        const packageIconLarge = createElement('span', 'h-16 w-16 text-gray-400 mx-auto mb-4');
+                        packageIconLarge.innerHTML = icons.package;
+                        noProductsDiv.appendChild(packageIconLarge);
+                        noProductsDiv.appendChild(createElement('h3', 'text-xl font-semibold text-gray-600 mb-2', 'Nenhum produto cadastrado'));
+                        noProductsDiv.appendChild(createElement('p', 'text-gray-500', 'Clique em "Adicionar Produto" para começar.'));
+                        productListGrid.appendChild(noProductsDiv);
+                    } else {
+                        products.forEach((product, index) => {
+                            const card = createElement('div', 'bg-white rounded-lg shadow-sm fade-in');
+                            card.style.animationDelay = `${index * 0.1}s`;
+                            card.offsetHeight;
+                            const cardContent = createElement('div', 'p-4');
+                            const flexDiv = createElement('div', 'flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4');
+
+                            const imgDiv = createElement('div', 'flex items-center space-x-4 flex-1');
+                            const img = createElement('img', 'w-16 h-16 object-cover rounded bg-gray-100 flex-shrink-0', '', { src: product.image, alt: product.name });
+                            const textDiv = createElement('div', 'min-w-0 flex-1');
+                            textDiv.appendChild(createElement('h3', 'font-semibold truncate', product.name));
+                            textDiv.appendChild(createElement('p', 'text-sm text-gray-600 line-clamp-2', product.description));
+                            textDiv.appendChild(createElement('p', 'text-lg font-bold text-purple-600', 'R$ ' + product.price.toFixed(2)));
+                            imgDiv.appendChild(img);
+                            imgDiv.appendChild(textDiv);
+
+                            const actionsDiv = createElement('div', 'flex space-x-2 w-full sm:w-auto');
+                            const editButton = createElement('button', 'inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-9 px-4 py-2 flex-1 sm:flex-none', '');
+                            editButton.innerHTML = icons.edit;
+                            editButton.addEventListener('click', () => showProductDialog(product));
+
+                            const deleteButton = createElement('button', 'inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-9 px-4 py-2 flex-1 sm:flex-none', '');
+                            deleteButton.innerHTML = icons.trash2;
+                            deleteButton.addEventListener('click', () => deleteProductFromAdmin(product.id));
+
+                            actionsDiv.appendChild(editButton);
+                            actionsDiv.appendChild(deleteButton);
+
+                            flexDiv.appendChild(imgDiv);
+                            flexDiv.appendChild(actionsDiv);
+                            cardContent.appendChild(flexDiv);
+                            card.appendChild(cardContent);
+                            productListGrid.appendChild(card);
+                        });
+                    }
+                }
+
+                // Product Dialog (Modal)
+                let productDialogInstance = null;
+                let currentEditingProduct = null;
+                let selectedImageFile = null;
+
+                function showProductDialog(product = null) {
+                    currentEditingProduct = product;
+                    selectedImageFile = null;
+
+                    if (productDialogInstance) {
+                        productDialogInstance.remove();
+                    }
+
+                    productDialogInstance = createElement('div', 'modal');
+                    const dialogContent = createElement('div', 'modal-content max-w-md mx-auto max-h-[90vh] overflow-y-auto');
+                    const closeButton = createElement('span', 'close-button', '&times;');
+                    closeButton.addEventListener('click', () => productDialogInstance.style.display = 'none');
+                    dialogContent.appendChild(closeButton);
+
+                    const dialogHeader = createElement('div', 'flex flex-col space-y-1.5 pb-4');
+                    dialogHeader.appendChild(createElement('h3', 'text-2xl font-semibold leading-none tracking-tight', product ? 'Editar Produto' : 'Adicionar Produto'));
+                    dialogContent.appendChild(dialogHeader);
+
+                    const formDiv = createElement('div', 'space-y-4');
+
+                    const nameDiv = createElement('div', '');
+                    nameDiv.appendChild(createElement('label', 'text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 block mb-1', 'Nome'));
+                    const nameInput = createElement('input', 'flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50', '', { placeholder: 'Nome do produto', value: product ? product.name : '' });
+                    nameDiv.appendChild(nameInput);
+                    formDiv.appendChild(nameDiv);
+
+                    const priceDiv = createElement('div', '');
+                    priceDiv.appendChild(createElement('label', 'text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 block mb-1', 'Preço'));
+                    const priceInput = createElement('input', 'flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50', '', { type: 'number', step: '0.01', placeholder: '0.00', value: product ? product.price.toString() : '' });
+                    priceDiv.appendChild(priceInput);
+                    formDiv.appendChild(priceDiv);
+
+                    const categoryDiv = createElement('div', '');
+                    categoryDiv.appendChild(createElement('label', 'text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 block mb-1', 'Categoria'));
+                    const categoryInput = createElement('input', 'flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50', '', { placeholder: 'Ex: cadernos, canetas', value: product ? product.category : '' });
+                    categoryDiv.appendChild(categoryInput);
+                    formDiv.appendChild(categoryDiv);
+
+                    const descriptionDiv = createElement('div', '');
+                    descriptionDiv.appendChild(createElement('label', 'text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 block mb-1', 'Descrição'));
+                    const descriptionTextarea = createElement('textarea', 'flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 resize-none', '', { placeholder: 'Descrição do produto' });
+                    descriptionTextarea.value = product ? product.description : '';
+                    descriptionDiv.appendChild(descriptionTextarea);
+                    formDiv.appendChild(descriptionDiv);
+
+                    const imageDiv = createElement('div', '');
+                    imageDiv.appendChild(createElement('label', 'text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 block mb-1', 'Imagem do Produto'));
+                    const imageUploadSpace = createElement('div', 'space-y-3');
+
+                    const fileInputContainer = createElement('div', 'flex items-center gap-2');
+                    const fileInputButton = createElement('button', 'inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-9 px-4 py-2 w-full', 'Selecionar Imagem');
+                    const uploadIcon = createElement('span', 'mr-2 h-4 w-4');
+                    uploadIcon.innerHTML = icons.upload;
+                    fileInputButton.prepend(uploadIcon);
+                    const fileInput = createElement('input', 'hidden', '', { type: 'file', accept: 'image/*' });
+                    fileInput.id = 'image-upload';
+                    fileInputContainer.appendChild(fileInputButton);
+                    fileInputContainer.appendChild(fileInput);
+                    imageUploadSpace.appendChild(fileInputContainer);
+
+                    const fileNameDisplay = createElement('p', 'text-sm text-green-600 hidden');
+                    imageUploadSpace.appendChild(fileNameDisplay);
+
+                    const imagePreviewDiv = createElement('div', 'border rounded-lg p-2 hidden');
+                    const imagePreview = createElement('img', 'w-full h-32 object-cover rounded', '', { alt: 'Preview' });
+                    imagePreviewDiv.appendChild(imagePreview);
+                    imageUploadSpace.appendChild(imagePreviewDiv);
+
+                    const orText = createElement('div', 'text-center text-gray-500 text-sm', 'ou');
+                    imageUploadSpace.appendChild(orText);
+
+                    const imageUrlInput = createElement('input', 'flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50', '', { placeholder: 'URL da imagem (opcional)', value: product && !product.image.startsWith('data:') ? product.image : '' });
+                    imageUploadSpace.appendChild(imageUrlInput);
+
+                    imageDiv.appendChild(imageUploadSpace);
+                    formDiv.appendChild(imageDiv);
+
+                    if (product && product.image) {
+                        imagePreview.src = product.image;
+                        imagePreviewDiv.classList.remove('hidden');
+                        if (product.image.startsWith('data:')) {
+                            fileNameDisplay.textContent = 'Imagem carregada (base64)';
+                            fileNameDisplay.classList.remove('hidden');
+                        }
+                    }
+
+                    fileInputButton.addEventListener('click', () => fileInput.click());
+                    fileInput.addEventListener('change', (e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                            if (file.type.startsWith('image/')) {
+                                selectedImageFile = file;
+                                fileNameDisplay.textContent = 'Arquivo selecionado: ' + file.name;
+                                fileNameDisplay.classList.remove('hidden');
+                                imageUrlInput.value = '';
+
+                                const reader = new FileReader();
+                                reader.onload = (e) => {
+                                    imagePreview.src = e.target.result;
+                                    imagePreviewDiv.classList.remove('hidden');
+                                };
+                                reader.readAsDataURL(file);
+                            } else {
+                                showToast('Por favor, selecione apenas arquivos de imagem', 'error');
+                                fileInput.value = '';
+                                selectedImageFile = null;
+                                fileNameDisplay.classList.add('hidden');
+                                imagePreviewDiv.classList.add('hidden');
+                            }
+                        } else {
+                            selectedImageFile = null;
+                            fileNameDisplay.classList.add('hidden');
+                        }
+                    });
+
+                    imageUrlInput.addEventListener('input', () => {
+                        selectedImageFile = null;
+                        fileNameDisplay.classList.add('hidden');
+                        if (imageUrlInput.value) {
+                            imagePreview.src = imageUrlInput.value;
+                            imagePreviewDiv.classList.remove('hidden');
+                        } else {
+                            imagePreviewDiv.classList.add('hidden');
+                        }
+                    });
+
+                    const actionsDiv = createElement('div', 'flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-2 mt-4');
+                                    const cancelButton = createElement('button', 'inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-9 px-4 py-2 w-full sm:w-auto', 'Cancelar');
+                cancelButton.addEventListener('click', () => {
+                    // Animação suave de saída
+                    productDialogInstance.style.opacity = '0';
+                    productDialogInstance.style.transform = 'scale(0.95)';
+                    setTimeout(() => {
+                        productDialogInstance.style.display = 'none';
+                        // Limpa os dados do formulário
+                        nameInput.value = '';
+                        priceInput.value = '';
+                        categoryInput.value = '';
+                        descriptionTextarea.value = '';
+                        imageUrlInput.value = '';
+                        selectedImageFile = null;
+                        if (imagePreviewDiv) imagePreviewDiv.classList.add('hidden');
+                        if (fileNameDisplay) fileNameDisplay.classList.add('hidden');
+                    }, 200);
+                });
+
+                    const saveButton = createElement('button', 'inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-9 px-4 py-2 w-full sm:w-auto', product ? 'Atualizar' : 'Adicionar');
+                    saveButton.addEventListener('click', () => {
+                        const name = nameInput.value.trim();
+                        const price = parseFloat(priceInput.value);
+                        const description = descriptionTextarea.value.trim();
+                        const category = categoryInput.value.trim();
+                        let image = imageUrlInput.value.trim();
+
+                        if (!name || isNaN(price) || price <= 0) {
+                            showToast('Nome e preço (válido) são obrigatórios!', 'error');
+                            return;
+                        }
+
+                        if (selectedImageFile) {
+                            const reader = new FileReader();
+                            reader.onload = (e) => {
+                                image = e.target.result;
+                                saveProductLogic(name, price, description, category, image);
+                            };
+                            reader.readAsDataURL(selectedImageFile);
+                        } else {
+                            saveProductLogic(name, price, description, category, image || '/placeholder.svg');
+                        }
+                    });
+
+                    function saveProductLogic(name, price, description, category, image) {
+                        const newProduct = {
+                            name,
+                            price,
+                            description,
+                            category,
+                            image: image || '/placeholder.svg'
+                        };
+
+                        if (currentEditingProduct) {
+                            updateProduct(currentEditingProduct.id, newProduct)
+                            .then(() => {
+                                showToast('Produto atualizado!', 'success');
+                                // Animação suave de saída
+                                productDialogInstance.style.opacity = '0';
+                                productDialogInstance.style.transform = 'scale(0.95)';
+                                setTimeout(() => {
+                                    productDialogInstance.style.display = 'none';
+                                    // Recarrega a lista de produtos na mesma aba
+                                    renderProductsTabContent();
+                                }, 200);
+                            })
+                            .catch((error) => {
+                                console.error('Erro ao atualizar produto:', error);
+                                showToast('Erro ao atualizar produto!', 'error');
+                            });
+                        } else {
+                            addProduct(newProduct)
+                            .then(() => {
+                                showToast('Produto adicionado!', 'success');
+                                // Animação suave de saída
+                                productDialogInstance.style.opacity = '0';
+                                productDialogInstance.style.transform = 'scale(0.95)';
+                                setTimeout(() => {
+                                    productDialogInstance.style.display = 'none';
+                                    // Recarrega a lista de produtos na mesma aba
+                                    renderProductsTabContent();
+                                }, 200);
+                            })
+                            .catch((error) => {
+                                console.error('Erro ao adicionar produto:', error);
+                                showToast('Erro ao adicionar produto!', 'error');
+                            });
+                        }
+                    }
+
+                    actionsDiv.appendChild(cancelButton);
+                    actionsDiv.appendChild(saveButton);
+                    formDiv.appendChild(actionsDiv);
+
+                    dialogContent.appendChild(formDiv);
+                                    productDialogInstance.appendChild(dialogContent);
+                document.body.appendChild(productDialogInstance);
+                productDialogInstance.style.display = 'flex';
+                productDialogInstance.style.opacity = '0';
+                productDialogInstance.style.transform = 'scale(0.95)';
+                // Animação suave de entrada
+                setTimeout(() => {
+                    productDialogInstance.style.opacity = '1';
+                    productDialogInstance.style.transform = 'scale(1)';
+                }, 10);
+                
+                // Fechar modal clicando fora
+                productDialogInstance.addEventListener('click', (e) => {
+                    if (e.target === productDialogInstance) {
+                        // Animação suave de saída
+                        productDialogInstance.style.opacity = '0';
+                        productDialogInstance.style.transform = 'scale(0.95)';
+                        setTimeout(() => {
+                            productDialogInstance.style.display = 'none';
+                            // Limpa os dados do formulário
+                            nameInput.value = '';
+                            priceInput.value = '';
+                            categoryInput.value = '';
+                            descriptionTextarea.value = '';
+                            imageUrlInput.value = '';
+                            selectedImageFile = null;
+                            if (imagePreviewDiv) imagePreviewDiv.classList.add('hidden');
+                            if (fileNameDisplay) fileNameDisplay.classList.add('hidden');
+                        }, 200);
+                    }
+                });
+                }
+
+                function deleteProductFromAdmin(id) {
+                    if (confirm('Tem certeza que deseja remover este produto?')) {
+                        deleteProduct(id)
+                        .then(() => {
+                            showToast('Produto removido!', 'success');
+                            // Atualiza a lista de produtos na mesma aba
+                            setTimeout(() => {
+                                renderProductsTabContent();
+                            }, 100);
+                        })
+                        .catch((error) => {
+                            console.error('Erro ao remover produto:', error);
+                            showToast('Erro ao remover produto!', 'error');
+                        });
+                    }
+                }
+
+                renderProductsTabContent();
+            }
 
             const productListGrid = createElement('div', 'grid gap-4');
             productManagementDiv.appendChild(productListGrid);
 
-            function renderProductList() {
-                clearChildren(productListGrid);
-                if (products.length === 0) {
-                    const noProductsDiv = createElement('div', 'text-center py-8 col-span-full');
-                    const packageIconLarge = createElement('span', 'h-16 w-16 text-gray-400 mx-auto mb-4');
-                    packageIconLarge.innerHTML = icons.package;
-                    noProductsDiv.appendChild(packageIconLarge);
-                    noProductsDiv.appendChild(createElement('h3', 'text-xl font-semibold text-gray-600 mb-2', 'Nenhum produto cadastrado'));
-                    noProductsDiv.appendChild(createElement('p', 'text-gray-500', 'Clique em "Adicionar Produto" para começar.'));
-                    productListGrid.appendChild(noProductsDiv);
-                } else {
-                    products.forEach(product => {
-                        const card = createElement('div', 'bg-white rounded-lg shadow-sm');
-                        const cardContent = createElement('div', 'p-4');
-                        const flexDiv = createElement('div', 'flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4');
 
-                        const imgDiv = createElement('div', 'flex items-center space-x-4 flex-1');
-                        const img = createElement('img', 'w-16 h-16 object-cover rounded bg-gray-100 flex-shrink-0', '', { src: product.image, alt: product.name });
-                        const textDiv = createElement('div', 'min-w-0 flex-1');
-                        textDiv.appendChild(createElement('h3', 'font-semibold truncate', product.name));
-                        textDiv.appendChild(createElement('p', 'text-sm text-gray-600 line-clamp-2', product.description));
-                        textDiv.appendChild(createElement('p', 'text-lg font-bold text-purple-600', 'R$ ' + product.price.toFixed(2)));
-                        imgDiv.appendChild(img);
-                        imgDiv.appendChild(textDiv);
-
-                        const actionsDiv = createElement('div', 'flex space-x-2 w-full sm:w-auto');
-                        const editButton = createElement('button', 'inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-9 px-4 py-2 flex-1 sm:flex-none', '');
-                        editButton.innerHTML = icons.edit;
-                        editButton.addEventListener('click', () => showProductDialog(product));
-
-                        const deleteButton = createElement('button', 'inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-9 px-4 py-2 flex-1 sm:flex-none', '');
-                        deleteButton.innerHTML = icons.trash2;
-                        deleteButton.addEventListener('click', () => deleteProductFromAdmin(product.id));
-
-                        actionsDiv.appendChild(editButton);
-                        actionsDiv.appendChild(deleteButton);
-
-                        flexDiv.appendChild(imgDiv);
-                        flexDiv.appendChild(actionsDiv);
-                        cardContent.appendChild(flexDiv);
-                        card.appendChild(cardContent);
-                        productListGrid.appendChild(card);
-                    });
-                }
-            }
 
             // Product Dialog (Modal)
             let productDialogInstance = null;
@@ -876,7 +1526,23 @@
                 productDialogInstance = createElement('div', 'modal');
                 const dialogContent = createElement('div', 'modal-content max-w-md mx-auto max-h-[90vh] overflow-y-auto');
                 const closeButton = createElement('span', 'close-button', '&times;');
-                closeButton.addEventListener('click', () => productDialogInstance.style.display = 'none');
+                closeButton.addEventListener('click', () => {
+                    // Animação suave de saída
+                    productDialogInstance.style.opacity = '0';
+                    productDialogInstance.style.transform = 'scale(0.95)';
+                    setTimeout(() => {
+                        productDialogInstance.style.display = 'none';
+                        // Limpa os dados do formulário
+                        nameInput.value = '';
+                        priceInput.value = '';
+                        categoryInput.value = '';
+                        descriptionTextarea.value = '';
+                        imageUrlInput.value = '';
+                        selectedImageFile = null;
+                        if (imagePreviewDiv) imagePreviewDiv.classList.add('hidden');
+                        if (fileNameDisplay) fileNameDisplay.classList.add('hidden');
+                    }, 200);
+                });
                 dialogContent.appendChild(closeButton);
 
                 const dialogHeader = createElement('div', 'flex flex-col space-y-1.5 pb-4');
@@ -1073,6 +1739,10 @@
                     deleteProduct(id)
                     .then(() => {
                         showToast('Produto removido!', 'success');
+                        // Atualiza a lista de produtos na mesma aba
+                        setTimeout(() => {
+                            renderProductsTabContent();
+                        }, 100);
                     })
                     .catch((error) => {
                         console.error('Erro ao remover produto:', error);
@@ -1082,7 +1752,203 @@
             }
 
             parentDiv.appendChild(productManagementDiv);
-            renderProductList(); // Initial render of product list
+            renderProductContent(); // Initial render
+        }
+
+        // --- Categories Tab ---
+        function renderCategoriesTab(parentDiv) {
+            const headerDiv = createElement('div', 'flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-4');
+            const h2 = createElement('h2', 'text-xl font-semibold', 'Gerenciar Categorias');
+
+            const addCategoryButton = createElement('button', 'inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-9 px-4 py-2 mb-2', 'Adicionar Categoria');
+            const plusIcon = createElement('span', 'mr-2 h-4 w-4');
+            plusIcon.innerHTML = icons.plus;
+            addCategoryButton.prepend(plusIcon);
+            addCategoryButton.addEventListener('click', () => showCategoryDialog());
+
+            headerDiv.appendChild(h2);
+            headerDiv.appendChild(addCategoryButton);
+            parentDiv.appendChild(headerDiv);
+
+            const categoryListGrid = createElement('div', 'grid gap-4');
+            parentDiv.appendChild(categoryListGrid);
+
+            function renderCategoryList() {
+                clearChildren(categoryListGrid);
+                if (categories.length === 0) {
+                    const noCategoriesDiv = createElement('div', 'text-center py-8 col-span-full');
+                    noCategoriesDiv.appendChild(createElement('h3', 'text-xl font-semibold text-gray-600 mb-2', 'Nenhuma categoria cadastrada'));
+                    noCategoriesDiv.appendChild(createElement('p', 'text-gray-500', 'Clique em "Adicionar Categoria" para começar.'));
+                    categoryListGrid.appendChild(noCategoriesDiv);
+                } else {
+                    categories.forEach((category, index) => {
+                        const card = createElement('div', 'bg-white rounded-lg shadow-sm fade-in');
+                        card.style.animationDelay = `${index * 0.1}s`;
+                        card.offsetHeight;
+                        const cardContent = createElement('div', 'p-4');
+                        const flexDiv = createElement('div', 'flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4');
+
+                        const textDiv = createElement('div', 'min-w-0 flex-1');
+                        textDiv.appendChild(createElement('h3', 'font-semibold truncate', category.name));
+                        if (category.description) {
+                            textDiv.appendChild(createElement('p', 'text-sm text-gray-600 line-clamp-2', category.description));
+                        }
+
+                        const actionsDiv = createElement('div', 'flex space-x-2 w-full sm:w-auto');
+                        const editButton = createElement('button', 'inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-9 px-4 py-2 flex-1 sm:flex-none', '');
+                        editButton.innerHTML = icons.edit;
+                        editButton.addEventListener('click', () => showCategoryDialog(category));
+
+                        const deleteButton = createElement('button', 'inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-9 px-4 py-2 flex-1 sm:flex-none', '');
+                        deleteButton.innerHTML = icons.trash2;
+                        deleteButton.addEventListener('click', () => deleteCategoryFromAdmin(category.id));
+
+                        actionsDiv.appendChild(editButton);
+                        actionsDiv.appendChild(deleteButton);
+
+                        flexDiv.appendChild(textDiv);
+                        flexDiv.appendChild(actionsDiv);
+                        cardContent.appendChild(flexDiv);
+                        card.appendChild(cardContent);
+                        categoryListGrid.appendChild(card);
+                    });
+                }
+            }
+
+            // Category Dialog (Modal)
+            let categoryDialogInstance = null;
+            let currentEditingCategory = null;
+
+            function showCategoryDialog(category = null) {
+                currentEditingCategory = category;
+
+                if (categoryDialogInstance) {
+                    categoryDialogInstance.remove();
+                }
+
+                categoryDialogInstance = createElement('div', 'modal');
+                const dialogContent = createElement('div', 'modal-content max-w-md mx-auto');
+                const closeButton = createElement('span', 'close-button', '&times;');
+                closeButton.addEventListener('click', () => {
+                    categoryDialogInstance.style.display = 'none';
+                    // Limpa os dados do formulário
+                    nameInput.value = '';
+                    descriptionTextarea.value = '';
+                });
+                dialogContent.appendChild(closeButton);
+
+                const dialogHeader = createElement('div', 'flex flex-col space-y-1.5 pb-4');
+                dialogHeader.appendChild(createElement('h3', 'text-2xl font-semibold leading-none tracking-tight', category ? 'Editar Categoria' : 'Adicionar Categoria'));
+                dialogContent.appendChild(dialogHeader);
+
+                const formDiv = createElement('div', 'space-y-4');
+
+                const nameDiv = createElement('div', '');
+                nameDiv.appendChild(createElement('label', 'text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 block mb-1', 'Nome da Categoria'));
+                const nameInput = createElement('input', 'flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50', '', { placeholder: 'Ex: cadernos, canetas', value: category ? category.name : '' });
+                nameDiv.appendChild(nameInput);
+                formDiv.appendChild(nameDiv);
+
+                const descriptionDiv = createElement('div', '');
+                descriptionDiv.appendChild(createElement('label', 'text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 block mb-1', 'Descrição (opcional)'));
+                const descriptionTextarea = createElement('textarea', 'flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 resize-none', '', { placeholder: 'Descrição da categoria' });
+                descriptionTextarea.value = category ? category.description || '' : '';
+                descriptionDiv.appendChild(descriptionTextarea);
+                formDiv.appendChild(descriptionDiv);
+
+                const actionsDiv = createElement('div', 'flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-2 mt-4');
+                const cancelButton = createElement('button', 'inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-9 px-4 py-2 w-full sm:w-auto', 'Cancelar');
+                cancelButton.addEventListener('click', () => {
+                    categoryDialogInstance.style.display = 'none';
+                    // Limpa os dados do formulário
+                    nameInput.value = '';
+                    descriptionTextarea.value = '';
+                });
+
+                const saveButton = createElement('button', 'inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-9 px-4 py-2 w-full sm:w-auto', category ? 'Atualizar' : 'Adicionar');
+                saveButton.addEventListener('click', () => {
+                    const name = nameInput.value.trim();
+                    const description = descriptionTextarea.value.trim();
+
+                    if (!name) {
+                        showToast('Nome da categoria é obrigatório!', 'error');
+                        return;
+                    }
+
+                    const newCategory = {
+                        name,
+                        description: description || null
+                    };
+
+                    if (currentEditingCategory) {
+                        updateCategory(currentEditingCategory.id, newCategory)
+                        .then(() => {
+                            showToast('Categoria atualizada!', 'success');
+                            categoryDialogInstance.style.display = 'none';
+                            // Pequeno delay para melhor experiência
+                            setTimeout(() => {
+                                renderCategoryList();
+                            }, 100);
+                        })
+                        .catch((error) => {
+                            console.error('Erro ao atualizar categoria:', error);
+                            showToast('Erro ao atualizar categoria!', 'error');
+                        });
+                    } else {
+                        addCategory(newCategory)
+                        .then(() => {
+                            showToast('Categoria adicionada!', 'success');
+                            categoryDialogInstance.style.display = 'none';
+                            // Pequeno delay para melhor experiência
+                            setTimeout(() => {
+                                renderCategoryList();
+                            }, 100);
+                        })
+                        .catch((error) => {
+                            console.error('Erro ao adicionar categoria:', error);
+                            showToast('Erro ao adicionar categoria!', 'error');
+                        });
+                    }
+                });
+
+                actionsDiv.appendChild(cancelButton);
+                actionsDiv.appendChild(saveButton);
+                formDiv.appendChild(actionsDiv);
+
+                dialogContent.appendChild(formDiv);
+                categoryDialogInstance.appendChild(dialogContent);
+                document.body.appendChild(categoryDialogInstance);
+                categoryDialogInstance.style.display = 'flex';
+                
+                // Fechar modal clicando fora
+                categoryDialogInstance.addEventListener('click', (e) => {
+                    if (e.target === categoryDialogInstance) {
+                        categoryDialogInstance.style.display = 'none';
+                        // Limpa os dados do formulário
+                        nameInput.value = '';
+                        descriptionTextarea.value = '';
+                    }
+                });
+            }
+
+            function deleteCategoryFromAdmin(id) {
+                if (confirm('Tem certeza que deseja remover esta categoria?')) {
+                    deleteCategory(id)
+                    .then(() => {
+                        showToast('Categoria removida!', 'success');
+                        // Atualiza a lista de categorias na mesma aba
+                        setTimeout(() => {
+                            renderCategoryList();
+                        }, 100);
+                    })
+                    .catch((error) => {
+                        console.error('Erro ao remover categoria:', error);
+                        showToast('Erro ao remover categoria!', 'error');
+                    });
+                }
+            }
+
+            renderCategoryList();
         }
 
         // --- Shipping Management (Admin) ---
@@ -1108,15 +1974,15 @@
                 clearChildren(shippingListGrid);
                 if (shippingZones.length === 0) {
                     const noZonesDiv = createElement('div', 'text-center py-8 col-span-full');
-                    const truckIconLarge = createElement('span', 'h-16 w-16 text-gray-400 mx-auto mb-4');
-                    truckIconLarge.innerHTML = icons.truck;
-                    noZonesDiv.appendChild(truckIconLarge);
                     noZonesDiv.appendChild(createElement('h3', 'text-xl font-semibold text-gray-600 mb-2', 'Nenhuma zona de frete cadastrada'));
                     noZonesDiv.appendChild(createElement('p', 'text-gray-500', 'Clique em "Adicionar Frete" para começar.'));
                     shippingListGrid.appendChild(noZonesDiv);
                 } else {
-                    shippingZones.forEach(zone => {
-                        const card = createElement('div', 'bg-white rounded-lg shadow-sm');
+                    shippingZones.forEach((zone, index) => {
+                        const card = createElement('div', 'bg-white rounded-lg shadow-sm fade-in');
+                        card.style.animationDelay = `${index * 0.1}s`;
+                        // Força o reflow para garantir que a animação seja aplicada
+                        card.offsetHeight;
                         const cardContent = createElement('div', 'p-4');
                         const flexDiv = createElement('div', 'flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4');
 
@@ -1159,7 +2025,12 @@
                 shippingDialogInstance = createElement('div', 'modal');
                 const dialogContent = createElement('div', 'modal-content max-w-md mx-auto');
                 const closeButton = createElement('span', 'close-button', '&times;');
-                closeButton.addEventListener('click', () => shippingDialogInstance.style.display = 'none');
+                closeButton.addEventListener('click', () => {
+                    shippingDialogInstance.style.display = 'none';
+                    // Limpa os dados do formulário
+                    neighborhoodInput.value = '';
+                    priceInput.value = '';
+                });
                 dialogContent.appendChild(closeButton);
 
                 const dialogHeader = createElement('div', 'flex flex-col space-y-1.5 pb-4');
@@ -1182,7 +2053,12 @@
 
                 const actionsDiv = createElement('div', 'flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-2 mt-4');
                 const cancelButton = createElement('button', 'inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-9 px-4 py-2 w-full sm:w-auto', 'Cancelar');
-                cancelButton.addEventListener('click', () => shippingDialogInstance.style.display = 'none');
+                cancelButton.addEventListener('click', () => {
+                    shippingDialogInstance.style.display = 'none';
+                    // Limpa os dados do formulário
+                    neighborhoodInput.value = '';
+                    priceInput.value = '';
+                });
 
                 const saveButton = createElement('button', 'inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-9 px-4 py-2 w-full sm:w-auto', zone ? 'Atualizar' : 'Adicionar');
                 saveButton.addEventListener('click', () => {
@@ -1205,6 +2081,10 @@
                         .then(() => {
                             showToast('Frete atualizado!', 'success');
                             shippingDialogInstance.style.display = 'none';
+                            // Pequeno delay para melhor experiência
+                            setTimeout(() => {
+                                renderShippingList();
+                            }, 100);
                         })
                         .catch((error) => {
                             console.error('Erro ao atualizar frete:', error);
@@ -1216,6 +2096,10 @@
                         .then(() => {
                             showToast('Frete adicionado!', 'success');
                             shippingDialogInstance.style.display = 'none';
+                            // Pequeno delay para melhor experiência
+                            setTimeout(() => {
+                                renderShippingList();
+                            }, 100);
                         })
                         .catch((error) => {
                             console.error('Erro ao adicionar frete:', error);
@@ -1232,6 +2116,16 @@
                 shippingDialogInstance.appendChild(dialogContent);
                 document.body.appendChild(shippingDialogInstance);
                 shippingDialogInstance.style.display = 'flex';
+                
+                // Fechar modal clicando fora
+                shippingDialogInstance.addEventListener('click', (e) => {
+                    if (e.target === shippingDialogInstance) {
+                        shippingDialogInstance.style.display = 'none';
+                        // Limpa os dados do formulário
+                        neighborhoodInput.value = '';
+                        priceInput.value = '';
+                    }
+                });
             }
 
             function deleteShippingFromAdmin(id) {
@@ -1239,6 +2133,10 @@
                     deleteShippingZone(id)
                     .then(() => {
                         showToast('Frete removido!', 'success');
+                        // Atualiza a lista de fretes na mesma aba
+                        setTimeout(() => {
+                            renderShippingList();
+                        }, 100);
                     })
                     .catch((error) => {
                         console.error('Erro ao remover frete:', error);
@@ -1299,10 +2197,39 @@
                 });
               }
               
-              // Atualiza catálogo e admin se estiverem na tela
-              if (typeof renderCatalogPage === 'function' && window.location.hash.includes('catalogo')) renderCatalogPage();
-              if (typeof renderAdminPanel === 'function' && window.location.hash.includes('admin')) renderAdminPanel();
+              // Atualiza catálogo se estiver na tela com animação suave
+              if (typeof renderCatalogPage === 'function' && window.location.hash.includes('catalogo')) {
+                setTimeout(() => renderCatalogPage(), 100);
+              }
+              // Não re-renderiza o admin panel para manter a aba ativa
             });
+            
+            // Listen for categories
+            listenCategories((cats) => {
+              categories = cats;
+              // Se não há categorias, adiciona algumas padrão
+              if (cats.length === 0) {
+                console.log('Nenhuma categoria encontrada, adicionando categorias padrão...');
+                const categoriasPadrao = [
+                  { name: 'Cadernos', description: 'Cadernos e agendas' },
+                  { name: 'Canetas', description: 'Canetas e marcadores' },
+                  { name: 'Borrrachas', description: 'Borrrachas e apagadores' },
+                  { name: 'Lápis', description: 'Lápis e grafites' },
+                  { name: 'Pastas', description: 'Pastas e organizadores' }
+                ];
+                
+                categoriasPadrao.forEach(categoria => {
+                  addCategory(categoria).then(() => {
+                    console.log('Categoria adicionada:', categoria.name);
+                  }).catch(error => {
+                    console.error('Erro ao adicionar categoria:', error);
+                  });
+                });
+              }
+              
+              // Não re-renderiza o admin panel para manter a aba ativa
+            });
+            
             listenShippingZones((zones) => {
               shippingZones = zones;
               // Se não há zonas de frete, adiciona algumas padrão
@@ -1326,8 +2253,10 @@
                 });
               }
               
-              if (typeof renderShippingPage === 'function' && window.location.hash.includes('fretes')) renderShippingPage();
-              if (typeof renderAdminPanel === 'function' && window.location.hash.includes('admin')) renderAdminPanel();
+              if (typeof renderShippingPage === 'function' && window.location.hash.includes('fretes')) {
+                setTimeout(() => renderShippingPage(), 100);
+              }
+              // Não re-renderiza o admin panel para manter a aba ativa
             });
             window.addEventListener('hashchange', handleRouteChange);
             renderApp(); // Initial render based on current hash
