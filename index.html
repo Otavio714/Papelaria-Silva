@@ -581,8 +581,9 @@
             const allOption = createElement('option', '', 'Todas as categorias', { value: 'all' });
             categorySelect.appendChild(allOption);
 
-            const categories = ['all', ...new Set(products.map(p => p.category))];
-            categories.filter(cat => cat !== 'all').forEach(category => {
+            // Usar categorias do banco de dados em vez de extrair dos produtos
+            const categoryNames = ['all', ...categories.map(cat => cat.name)];
+            categoryNames.filter(cat => cat !== 'all').forEach(category => {
                 const option = createElement('option', '', category.charAt(0).toUpperCase() + category.slice(1), { value: category });
                 categorySelect.appendChild(option);
             });
@@ -2180,11 +2181,11 @@
               if (produtos.length === 0) {
                 console.log('Nenhum produto encontrado, adicionando produtos padrão...');
                 const produtosPadrao = [
-                  { name: 'Caderno Universitário', price: 15.90, description: 'Caderno universitário 10 matérias, capa dura, 96 folhas', category: 'cadernos', image: 'https://placehold.co/192x192/E0E0E0/333333?text=Caderno' },
-                  { name: 'Caneta Esferográfica Azul', price: 2.50, description: 'Caneta esferográfica azul, ponta fina, escrita suave', category: 'canetas', image: 'https://placehold.co/192x192/E0E0E0/333333?text=Caneta' },
-                  { name: 'Borracha Branca', price: 1.80, description: 'Borracha macia, não mancha o papel, apaga limpo', category: 'borrachas', image: 'https://placehold.co/192x192/E0E0E0/333333?text=Borracha' },
-                  { name: 'Lápis Grafite HB', price: 1.20, description: 'Lápis grafite HB com borracha na ponta, ideal para desenho', category: 'lapis', image: 'https://placehold.co/192x192/E0E0E0/333333?text=Lapis' },
-                  { name: 'Pasta Plástica', price: 4.00, description: 'Pasta plástica com elástico, diversas cores disponíveis', category: 'pastas', image: 'https://placehold.co/192x192/E0E0E0/333333?text=Pasta' }
+                  { name: 'Caderno Universitário', price: 15.90, description: 'Caderno universitário 10 matérias, capa dura, 96 folhas', category: 'Cadernos', image: 'https://placehold.co/192x192/E0E0E0/333333?text=Caderno' },
+                  { name: 'Caneta Esferográfica Azul', price: 2.50, description: 'Caneta esferográfica azul, ponta fina, escrita suave', category: 'Canetas', image: 'https://placehold.co/192x192/E0E0E0/333333?text=Caneta' },
+                  { name: 'Borracha Branca', price: 1.80, description: 'Borracha macia, não mancha o papel, apaga limpo', category: 'Borrrachas', image: 'https://placehold.co/192x192/E0E0E0/333333?text=Borracha' },
+                  { name: 'Lápis Grafite HB', price: 1.20, description: 'Lápis grafite HB com borracha na ponta, ideal para desenho', category: 'Lápis', image: 'https://placehold.co/192x192/E0E0E0/333333?text=Lapis' },
+                  { name: 'Pasta Plástica', price: 4.00, description: 'Pasta plástica com elástico, diversas cores disponíveis', category: 'Pastas', image: 'https://placehold.co/192x192/E0E0E0/333333?text=Pasta' }
                 ];
                 
                 // Adiciona produtos um por um
@@ -2225,6 +2226,11 @@
                     console.error('Erro ao adicionar categoria:', error);
                   });
                 });
+              }
+              
+              // Atualiza catálogo se estiver na tela
+              if (typeof renderCatalogPage === 'function' && window.location.hash.includes('catalogo')) {
+                setTimeout(() => renderCatalogPage(), 100);
               }
               
               // Não re-renderiza o admin panel para manter a aba ativa

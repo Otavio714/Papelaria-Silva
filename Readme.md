@@ -206,7 +206,7 @@ papelaria-silva/
 ## ❓ FAQ
 
 ### 🤔 Como mudar a senha do administrador?
-**R:** Edite a linha `const ADMIN_PASSWORD = 'admin123';` no arquivo `index.html`
+**R:** Edite a linha `const ADMIN_PASSWORD =  no arquivo `index.html`
 
 ### 🤔 Como adicionar mais produtos?
 **R:** Acesse o painel administrativo → Produtos → Adicionar Produto
