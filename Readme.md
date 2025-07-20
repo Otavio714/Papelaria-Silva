@@ -71,8 +71,8 @@ A **Papelaria Silva** é um sistema completo de gerenciamento para papelarias qu
 
 #### 🔑 Primeiro Acesso
 1. **Abra o site** - Arquivo `index.html`
-2. **Acesse o painel** - Pressione `Ctrl + Shift + A` ou vá para `/admin`
-3. **Digite a senha** - Senha padrão: `admin123`
+2. **Acesse o painel**
+3. **Digite a senha** 
 4. **Pronto!** - Você está no painel administrativo
 
 #### 📦 Gerenciando Produtos
