@@ -1398,6 +1398,10 @@
                             };
                             reader.readAsDataURL(selectedImageFile);
                         } else {
+                            // Se não tem nova imagem e o campo está vazio, mantém a imagem antiga
+                            if (!image && currentEditingProduct && currentEditingProduct.image) {
+                                image = currentEditingProduct.image;
+                            }
                             saveProductLogic(name, price, description, category, image || '/placeholder.svg');
                         }
                     });
