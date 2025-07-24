@@ -157,15 +157,6 @@ A **Papelaria Silva** é um sistema completo de gerenciamento para papelarias qu
 
 ## ⚙️ Configuração
 
-### 🔥 Firebase (Opcional)
-Para usar com banco de dados em tempo real:
-
-1. **Crie uma conta** - [firebase.google.com](https://firebase.google.com/)
-2. **Crie um projeto** - Siga o assistente
-3. **Ative o Firestore** - Banco de dados
-4. **Configure as regras** - Permissões de acesso
-5. **Substitua as configurações** - No arquivo `index.html`
-
 ### 📁 Estrutura de Arquivos
 ```
 papelaria-silva/
@@ -205,9 +196,6 @@ papelaria-silva/
 
 ## ❓ FAQ
 
-### 🤔 Como mudar a senha do administrador?
-**R:** Edite a linha `const ADMIN_PASSWORD =  no arquivo `index.html`
-
 ### 🤔 Como adicionar mais produtos?
 **R:** Acesse o painel administrativo → Produtos → Adicionar Produto
 
@@ -229,13 +217,6 @@ papelaria-silva/
 
 Agora você tem um sistema completo de gerenciamento para sua papelaria! 
 
-### 🚀 Próximos passos:
-1. **Personalize** - Adicione sua logo e cores
-2. **Configure** - Defina produtos e fretes
-3. **Teste** - Verifique se tudo funciona
-4. **Use** - Gerencie sua papelaria facilmente!
-
----
 
 <div align="center">
 
