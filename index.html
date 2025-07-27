@@ -2228,26 +2228,6 @@
             // Agora só usa Firebase para produtos e fretes
             listenProducts((produtos) => {
               products = produtos;
-              // Se não há produtos, adiciona alguns padrão
-              if (produtos.length === 0) {
-                console.log('Nenhum produto encontrado, adicionando produtos padrão...');
-                const produtosPadrao = [
-                  { name: 'Caderno Universitário', price: 15.90, description: 'Caderno universitário 10 matérias, capa dura, 96 folhas', category: 'Cadernos', image: 'https://placehold.co/192x192/E0E0E0/333333?text=Caderno' },
-                  { name: 'Caneta Esferográfica Azul', price: 2.50, description: 'Caneta esferográfica azul, ponta fina, escrita suave', category: 'Canetas', image: 'https://placehold.co/192x192/E0E0E0/333333?text=Caneta' },
-                  { name: 'Borracha Branca', price: 1.80, description: 'Borracha macia, não mancha o papel, apaga limpo', category: 'Borrrachas', image: 'https://placehold.co/192x192/E0E0E0/333333?text=Borracha' },
-                  { name: 'Lápis Grafite HB', price: 1.20, description: 'Lápis grafite HB com borracha na ponta, ideal para desenho', category: 'Lápis', image: 'https://placehold.co/192x192/E0E0E0/333333?text=Lapis' },
-                  { name: 'Pasta Plástica', price: 4.00, description: 'Pasta plástica com elástico, diversas cores disponíveis', category: 'Pastas', image: 'https://placehold.co/192x192/E0E0E0/333333?text=Pasta' }
-                ];
-                
-                // Adiciona produtos um por um
-                produtosPadrao.forEach(produto => {
-                  addProduct(produto).then(() => {
-                    console.log('Produto adicionado:', produto.name);
-                  }).catch(error => {
-                    console.error('Erro ao adicionar produto:', error);
-                  });
-                });
-              }
               
               // Atualiza catálogo se estiver na tela com animação suave
               if (typeof renderCatalogPage === 'function' && window.location.hash.includes('catalogo')) {
@@ -2259,25 +2239,6 @@
             // Listen for categories
             listenCategories((cats) => {
               categories = cats;
-              // Se não há categorias, adiciona algumas padrão
-              if (cats.length === 0) {
-                console.log('Nenhuma categoria encontrada, adicionando categorias padrão...');
-                const categoriasPadrao = [
-                  { name: 'Cadernos', description: 'Cadernos e agendas' },
-                  { name: 'Canetas', description: 'Canetas e marcadores' },
-                  { name: 'Borrrachas', description: 'Borrrachas e apagadores' },
-                  { name: 'Lápis', description: 'Lápis e grafites' },
-                  { name: 'Pastas', description: 'Pastas e organizadores' }
-                ];
-                
-                categoriasPadrao.forEach(categoria => {
-                  addCategory(categoria).then(() => {
-                    console.log('Categoria adicionada:', categoria.name);
-                  }).catch(error => {
-                    console.error('Erro ao adicionar categoria:', error);
-                  });
-                });
-              }
               
               // Atualiza catálogo se estiver na tela
               if (typeof renderCatalogPage === 'function' && window.location.hash.includes('catalogo')) {
@@ -2289,26 +2250,6 @@
             
             listenShippingZones((zones) => {
               shippingZones = zones;
-              // Se não há zonas de frete, adiciona algumas padrão
-              if (zones.length === 0) {
-                console.log('Nenhuma zona de frete encontrada, adicionando zonas padrão...');
-                const zonasPadrao = [
-                  { neighborhood: 'Centro', price: 5.00 },
-                  { neighborhood: 'Zona Norte', price: 8.00 },
-                  { neighborhood: 'Zona Sul', price: 10.00 },
-                  { neighborhood: 'Zona Leste', price: 12.00 },
-                  { neighborhood: 'Zona Oeste', price: 15.00 }
-                ];
-                
-                // Adiciona zonas um por uma
-                zonasPadrao.forEach(zona => {
-                  addShippingZone(zona).then(() => {
-                    console.log('Zona de frete adicionada:', zona.neighborhood);
-                  }).catch(error => {
-                    console.error('Erro ao adicionar zona de frete:', error);
-                  });
-                });
-              }
               
               if (typeof renderShippingPage === 'function' && window.location.hash.includes('fretes')) {
                 setTimeout(() => renderShippingPage(), 100);
